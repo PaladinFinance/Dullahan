@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.10;
+pragma solidity 0.8.16;
 
 import "../oz/utils/Ownable.sol";
 
@@ -14,10 +14,10 @@ contract Owner is Ownable {
 
     error CannotBeOwner();
     error CallerNotPendingOwner();
-    error OwnerZeroAddress();
+    error OwnerAddressZero();
 
     function transferOwnership(address newOwner) public override virtual onlyOwner {
-        if(newOwner == address(0)) revert OwnerZeroAddress();
+        if(newOwner == address(0)) revert OwnerAddressZero();
         if(newOwner == owner()) revert CannotBeOwner();
         address oldPendingOwner = pendingOwner;
 

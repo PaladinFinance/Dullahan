@@ -4,13 +4,14 @@ pragma solidity 0.8.16;
 library Errors {
 
     // Common Errors
-    error ZeroAddress();
+    error AddressZero();
     error NullAmount();
     error IncorrectRewardToken();
     error SameAddress();
     error InequalArraySizes();
     error EmptyArray();
     error EmptyParameters();
+    error NotInitialized();
     error AlreadyInitialized();
     error InvalidParameter();
     error CannotRecoverToken();
@@ -22,8 +23,8 @@ library Errors {
     error CallerNotPendingAdmin();
     error CallerNotAllowed();
 
-    // ERC20
-    error ERC20_ApproveZeroAddress();
+    // ERC20 Errors
+    error ERC20_ApproveAddressZero();
     error ERC20_AllowanceUnderflow();
     error ERC20_AmountOverAllowance();
     error ERC20_AddressZero();
@@ -31,7 +32,20 @@ library Errors {
     error ERC20_NullAmount();
     error ERC20_AmountExceedBalance();
 
-    // Maths
+    // Maths Errors
     error NumberExceed128Bits();
+
+    // Vault Errors
+    error ManagerAlreadyListed();
+    error ManagerNotListed();
+    error NotEnoughAvailableFunds();
+    error WithdrawBuffer();
+    error ReserveTooLow();
+
+    // Vaults Rewards Errors
+    error NullScaledAmount();
+    error AlreadyListedDepositor();
+    error NotListedDepositor();
+    error ClaimNotAllowed();
     
 }

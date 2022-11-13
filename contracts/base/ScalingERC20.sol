@@ -171,8 +171,8 @@ abstract contract ScalingERC20 is Context, IERC20 {
         address spender,
         uint256 amount
     ) internal virtual {
-        if(owner == address(0)) revert Errors.ERC20_ApproveZeroAddress();
-        if(spender == address(0)) revert Errors.ERC20_ApproveZeroAddress();
+        if(owner == address(0)) revert Errors.ERC20_ApproveAddressZero();
+        if(spender == address(0)) revert Errors.ERC20_ApproveAddressZero();
 
         _allowances[owner][spender] = amount;
         emit Approval(owner, spender, amount);
@@ -266,10 +266,6 @@ abstract contract ScalingERC20 is Context, IERC20 {
         address to,
         uint256 amount
     ) internal virtual {}
-
-    //Virtual admin method
-
-    function updateRewardsController(address newRewardsController) external virtual;
 
 
     // Maths
