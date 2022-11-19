@@ -41,11 +41,28 @@ library Errors {
     error NotEnoughAvailableFunds();
     error WithdrawBuffer();
     error ReserveTooLow();
+    error CallerNotAllowedManager();
+    error NotUndebtedManager();
 
     // Vaults Rewards Errors
     error NullScaledAmount();
     error AlreadyListedDepositor();
     error NotListedDepositor();
     error ClaimNotAllowed();
-    
+
+    // Pods Errors
+    error NotPodOwner();
+    error NotPodManager();
+    error FailPodStateUpdate();
+    error MintAmountUnderMinimum();
+
+    // Pods Manager Errors
+    error CallerNotValidPod();
+    error CollateralBlocked();
+    error MintingAllowanceFailed();
+    error FreeingStkAaveFailed();
+    error CollateralAlreadyListed();
+    error CollateralNotListed();
+    error CollateralNotAllowed();
+
 }

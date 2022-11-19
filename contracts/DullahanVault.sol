@@ -8,6 +8,7 @@ import "./oz/libraries/SafeERC20.sol";
 import "./oz/utils/ReentrancyGuard.sol";
 import "./oz/utils/Pausable.sol";
 import "./interfaces/IStakedAave.sol";
+import "./interfaces/IGovernancePowerDelegationToken.sol";
 import {Errors} from "./utils/Errors.sol";
 
 /** @title DullahanVault contract
@@ -29,10 +30,11 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
 
 
     // Struct
-    struct SubVaultsManager {
+    struct PodsManager { // To pack better - gas opti
         bool rentingAllowed;
         uint128 totalRented; // Based on the AAVE max total supply, should be safe
     }
+
 
     // Storage
     bool public initialized;
@@ -42,7 +44,9 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
 
     uint256 public totalRentedAmount;
 
-    mapping(address => SubVaultsManager) public subVaultManagers;
+    mapping(address => PodsManager) public podManagers;
+
+    address public votingPowerManager;
 
     uint256 public bufferRatio = 500; // We want a percentage of funds to stay in the contract for withdraws
 
@@ -50,12 +54,14 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
     uint256 public reserveRatio;
     address public reserveManager;
 
+
     // Events
 
     event Initialized();
 
-    event RentToSubVault(address indexed manager, address indexed subVault, uint256 amount);
-    event PullFromSubVault(address indexed manager, address indexed subVault, uint256 amount);
+    event RentToPod(address indexed manager, address indexed pod, uint256 amount);
+    event NotifyRentedAmount(address indexed manager, address indexed pod, uint256 addedAmount);
+    event PullFromPod(address indexed manager, address indexed pod, uint256 amount);
 
     event ReserveManagerUpdated(
         address indexed oldManager,
@@ -71,10 +77,11 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         address indexed newPendingAdmin
     );
 
-    event NewSubVaultManager(address indexed newManager);
-    event BlockedSubVaultManager(address indexed manager);
-
+    event NewPodManager(address indexed newManager);
+    event BlockedPodManager(address indexed manager);
+    event UpdatedVotingPowerManager(address indexed oldManager, address indexed newManager);
     event UpdatedBufferRatio(uint256 oldRatio, uint256 newRatio);
+
 
     // Modifers
 
@@ -83,15 +90,11 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         _;
     }
 
-    modifier onlyAllowedManagers() {
-        if (!subVaultManagers[_msgSender()].rentingAllowed) revert Errors.CallerNotAllowed();
-        _;
-    }
-
     modifier isInitialized() {
         if (!initialized) revert Errors.NotInitialized();
         _;
     }
+
 
     // Constructor
 
@@ -109,8 +112,10 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         reserveRatio = _reserveRatio;
     }
 
-    function init() external onlyAdmin {
+    function init(address _votingPowerManager) external onlyAdmin {
         if(initialized) revert Errors.AlreadyInitialized();
+
+        votingPowerManager = _votingPowerManager;
 
         // Seed deposit to prevent 1 wei LP token exploit
         _deposit(
@@ -119,8 +124,11 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
             msg.sender
         );
 
+        IGovernancePowerDelegationToken(STK_AAVE).delegate(_votingPowerManager);
+
         emit Initialized();
     }
+
 
     // View functions
 
@@ -184,6 +192,10 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         return balanceOf(owner);
     }
 
+    function getDelegate() external view returns(address) {
+        return votingPowerManager;
+    }
+
 
     // State-changing functions
 
@@ -240,11 +252,12 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
     }
 
 
-    // SubVaults Manager functions
+    // Pods Manager functions
 
-    function rentToSubVault(address subVault, uint256 amount) external nonReentrant onlyAllowedManagers {
+    function rentStkAave(address pod, uint256 amount) external nonReentrant {
         address manager = msg.sender;
-        if(subVault == address(0)) revert Errors.AddressZero();
+        if (!podManagers[manager].rentingAllowed) revert Errors.CallerNotAllowedManager();
+        if(pod == address(0)) revert Errors.AddressZero();
         if(amount == 0) revert Errors.NullAmount();
 
         _getStkAaveRewards();
@@ -257,26 +270,42 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         if(availableBalance < bufferAmount) revert Errors.WithdrawBuffer();
         if(amount > (availableBalance - bufferAmount)) revert Errors.NotEnoughAvailableFunds();
 
-        subVaultManagers[manager].totalRented += safe128(amount);
+        podManagers[manager].totalRented += safe128(amount);
         totalRentedAmount += amount;
-        _stkAave.safeTransfer(subVault, amount);
+        _stkAave.safeTransfer(pod, amount);
     
-        emit RentToSubVault(manager, subVault, amount);
+        emit RentToPod(manager, pod, amount);
     }
 
-    function pullFromSubVault(address subVault, uint256 amount)external nonReentrant onlyAllowedManagers {
+    // To track pods stkAave claims & re-stake into the main balance for ScalingeRC20 logic
+    function notifyRentedAmount(address pod, uint256 addedAmount) external nonReentrant {
         address manager = msg.sender;
-        if(subVault == address(0)) revert Errors.AddressZero();
+        if (!podManagers[manager].rentingAllowed) revert Errors.CallerNotAllowedManager();
+        if(pod == address(0)) revert Errors.AddressZero();
+        if(addedAmount == 0) revert Errors.NullAmount();
+
+        podManagers[manager].totalRented += safe128(addedAmount);
+        totalRentedAmount += addedAmount;
+
+        reserveAmount += (addedAmount * reserveRatio) / MAX_BPS;
+
+        emit NotifyRentedAmount(manager, pod, addedAmount);
+    }
+
+    function pullRentedStkAave(address pod, uint256 amount)external nonReentrant {
+        address manager = msg.sender;
+        if (podManagers[manager].totalRented == 0) revert Errors.NotUndebtedManager();
+        if(pod == address(0)) revert Errors.AddressZero();
         if(amount == 0) revert Errors.NullAmount();
 
         _getStkAaveRewards();
 
-        // We consider that subVault give MAX_UNIT256 allowance to this contract when created
-        IERC20(STK_AAVE).safeTransferFrom(subVault, address(this), amount);
-        subVaultManagers[manager].totalRented -= safe128(amount);
+        // We consider that pod give MAX_UNIT256 allowance to this contract when created
+        IERC20(STK_AAVE).safeTransferFrom(pod, address(this), amount);
+        podManagers[manager].totalRented -= safe128(amount);
         totalRentedAmount -= amount;
 
-        emit PullFromSubVault(manager, subVault, amount);
+        emit PullFromPod(manager, pod, amount);
     }
 
 
@@ -369,9 +398,12 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
             _stkAave.claimRewards(address(this), pendingRewards);
 
             reserveAmount += (pendingRewards * reserveRatio) / MAX_BPS;
+        }
 
-            IERC20 _aave = IERC20(AAVE);
-            uint256 currentBalance = IERC20(_aave).balanceOf(address(this));
+        IERC20 _aave = IERC20(AAVE);
+        uint256 currentBalance = IERC20(_aave).balanceOf(address(this));
+        
+        if(currentBalance > 0) {
             IERC20(_aave).safeIncreaseAllowance(STK_AAVE, currentBalance);
             _stkAave.stake(address(this), currentBalance);
         }
@@ -401,22 +433,34 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         emit NewPendingAdmin(newAdmin, address(0));
     }
 
-    function addSubVaultManager(address newManager) external onlyAdmin {
+    function addPodManager(address newManager) external onlyAdmin {
         if(newManager == address(0)) revert Errors.AddressZero();
-        if(subVaultManagers[newManager].rentingAllowed) revert Errors.ManagerAlreadyListed();
+        if(podManagers[newManager].rentingAllowed) revert Errors.ManagerAlreadyListed();
 
-        subVaultManagers[newManager].rentingAllowed = true;
+        podManagers[newManager].rentingAllowed = true;
 
-        emit NewSubVaultManager(newManager);
+        emit NewPodManager(newManager);
     }
 
-    function blockSubVaultManager(address manager) external onlyAdmin {
+    function blockPodManager(address manager) external onlyAdmin {
         if(manager == address(0)) revert Errors.AddressZero();
-        if(!subVaultManagers[manager].rentingAllowed) revert Errors.ManagerNotListed();
+        if(!podManagers[manager].rentingAllowed) revert Errors.ManagerNotListed();
 
-        subVaultManagers[manager].rentingAllowed = false;
+        podManagers[manager].rentingAllowed = false;
 
-        emit NewSubVaultManager(manager);
+        emit NewPodManager(manager);
+    }
+
+    function updateVotingPowerManager(address newManager) external onlyAdmin {
+        if(newManager == address(0)) revert Errors.AddressZero();
+        if(newManager == votingPowerManager) revert Errors.SameAddress();
+
+        address oldManager = votingPowerManager;
+        votingPowerManager = newManager;
+
+        IGovernancePowerDelegationToken(STK_AAVE).delegate(newManager);
+
+        emit UpdatedVotingPowerManager(oldManager, newManager);
     }
 
     function updateBufferRatio(uint256 newRatio) external onlyAdmin {
