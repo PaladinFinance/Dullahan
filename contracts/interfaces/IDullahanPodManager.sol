@@ -3,8 +3,7 @@ pragma solidity 0.8.16;
 
 interface IDullahanPodManager {
 
-    function mintFee() external view returns(uint256);
-    function extraInterestRatio() external view returns(uint256);
+    function mintFeeRatio() external view returns(uint256);
 
     function podOwedFees(address pod) external view returns(uint256);
 
@@ -14,5 +13,6 @@ interface IDullahanPodManager {
     function freeStkAave(address pod) external returns(bool);
 
     function notifyStkAaveClaim(uint256 claimedAmount) external;
+    function notifyPayFee(uint256 feeAmount) external;
 
 }

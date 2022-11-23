@@ -64,5 +64,8 @@ library Errors {
     error CollateralAlreadyListed();
     error CollateralNotListed();
     error CollateralNotAllowed();
+    error PodInvalid();
+    error FailStateUpdate();
+    error PodNotLiquidable();
 
 }

@@ -9,6 +9,10 @@ import "./utils/Owner.sol";
 import "./oz/libraries/Clones.sol";
 import "./DullahanVault.sol";
 import "./DullahanPod.sol";
+import "./interfaces/IDullahanRewardsStaking.sol";
+import "./interfaces/IFeeModule.sol";
+import "./interfaces/ISwapModule.sol";
+import "./interfaces/IOracleModule.sol";
 import {Errors} from "./utils/Errors.sol";
 
 /** @title DullahanPodManager contract
@@ -25,6 +29,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
     address public constant STK_AAVE = 0x4da27a545c0c5B758a6BA100e3a049001de870f5;
 
+    address public constant GHO = 0x000000000000000000000000000000000000dEaD;
     address public constant DEBT_GHO = 0x000000000000000000000000000000000000dEaD;
 
     address public constant AAVE_POOL_V3 = 0x000000000000000000000000000000000000dEaD;
@@ -36,8 +41,10 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         address podAddress;
         address podOwner;
         address collateral;
-        uint256 allowance; // ??
-        // to do
+        uint256 rentedAmount;
+        uint256 lastIndex;
+        uint256 lastUpdate; // timestamp
+        uint256 accruedFees;
     }
 
 
@@ -45,16 +52,29 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
     address public immutable vault;
 
-    address public podImplementation;
+    address public immutable rewardsStaking;
 
-    mapping(address => Pod) public pods;
-    address[] public allPods;
+    address public immutable podImplementation;
 
     mapping(address => bool) public allowedCollaterals;
     mapping(address => address) public aTokenForCollateral;
 
-    uint256 public mintFee = 50; // BPS: 0.5%
-    uint256 public extraInterestRatio = 1000; // BPS: 10%
+    mapping(address => Pod) public pods;
+    address[] public allPods;
+
+    address public feeModule;
+    address public swapModule;
+    address public oracleModule;
+
+    address public protocolFeeChest;
+
+    uint256 public currentIndex;
+    uint256 public lastIndexUpdate;
+
+    uint256 public mintFeeRatio = 50; // BPS: 0.5%
+    uint256 public protocolFeeRatio = 500; // BPS: 5%
+
+    uint256 public reserveAmount;
 
 
     // Events
@@ -65,8 +85,24 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         address indexed pod
     );
 
+    event FreedStkAave(address indexed pod, uint256 pullAmount);
+    event RentedStkAave(address indexed pod, uint256 rentAmount);
+
+    event LiquidatedPod(address indexed pod, address indexed collateral, uint256 collateralAmount, uint256 receivedFeeAmount);
+
+    event PaidFees(address indexed pod, uint256 feeAmount);
+
+    event ReserveProcessed(uint256 stakingRewardsAmount);
+
     event NewCollateral(address indexed collateral, address indexed aToken);
     event CollateralUpdated(address indexed collateral, bool allowed);
+
+    event FeeModuleUpdated(address indexed oldMoldule, address indexed newModule);
+    event SwapModuleUpdated(address indexed oldMoldule, address indexed newModule);
+    event OracleModuleUpdated(address indexed oldMoldule, address indexed newModule);
+
+    event MintFeeRatioUpdated(uint256 oldRatio, uint256 newRatio);
+    event ProtocolFeeRatioUpdated(uint256 oldRatio, uint256 newRatio);
 
 
     // Modifers
@@ -81,23 +117,53 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
     constructor(
         address _vault,
-        address _podImplementation
+        address _rewardsStaking,
+        address _protocolFeeChest,
+        address _podImplementation,
+        address _feeModule,
+        address _swapModule,
+        address _oracleModule
     ) {
-        if(_vault == address(0) || _podImplementation == address(0)) revert Errors.AddressZero();
+        if(
+            _vault == address(0)
+            || _rewardsStaking == address(0)
+            || _protocolFeeChest == address(0)
+            || _podImplementation == address(0)
+            || _feeModule == address(0)
+            || _swapModule == address(0)
+            || _oracleModule == address(0)
+        ) revert Errors.AddressZero();
 
         vault = _vault;
+        rewardsStaking = _rewardsStaking;
+        protocolFeeChest = _protocolFeeChest;
         podImplementation = _podImplementation;
+        feeModule = _feeModule;
+        swapModule = _swapModule;
+        oracleModule = _oracleModule;
     }
 
 
     // View functions
 
-    function podOwedFees(address pod) public view returns(uint256) {
+    function podCurrentOwedFees(address pod) public view returns(uint256) {
+        // to calculations here based on last index update
         return 0; // to do
+    }
+
+    function podOwedFees(address pod) public view returns(uint256) {
+        return pods[pod].accruedFees;
     }
 
     function getAllPods() external view returns(address[] memory) {
         return allPods;
+    }
+
+    function isPodLiquidable(address pod) public view returns(bool) {
+        // We consider the Pod liquidable since the Pod has no more GHO debt from Aave,
+        // but still owes fees to Dullahan, but the Pod logic forces to pay fees before
+        // repaying debt to Aave.
+        return IERC20(DEBT_GHO).balanceOf(pod) == 0 && pods[pod].accruedFees > 0;
     }
 
 
@@ -108,6 +174,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     ) external nonReentrant returns(address) {
         if(collateral == address(0)) revert Errors.AddressZero();
         if(!allowedCollaterals[collateral]) revert Errors.CollateralNotAllowed();
+        if(!_updateGlobalState()) revert Errors.FailStateUpdate();
 
         address podOwner = msg.sender;
 
@@ -136,13 +203,15 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     }
 
     function updatePodState(address pod) external nonReentrant returns(bool) {
-        // to do:
-        // handle fees accrual
+        if(pods[pod].podAddress == address(0)) revert Errors.PodInvalid();
 
-        return true;
+        return _updatePodState(pod);
     }
 
     function freeStkAave(address pod) external nonReentrant returns(bool) {
+        if(!_updatePodState(address(this))) revert Errors.FailPodStateUpdate();
+        if(pods[pod].podAddress == address(0)) revert Errors.PodInvalid();
+
         uint256 neededStkAaveAmount = _calculatedNeededStkAave(pod, 0);
         uint256 currentStkAaveBalance = IERC20(STK_AAVE).balanceOf(pod);
 
@@ -151,13 +220,46 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
             DullahanVault(vault).pullRentedStkAave(pod, pullAmount);
 
-            // event ?
+            emit FreedStkAave(pod, pullAmount);
         }
 
         return true;
     }
 
+    function liquidatePod(address pod) external nonReentrant returns(bool) {
+        if(pods[pod].podAddress == address(0)) revert Errors.PodInvalid();
+
+        _updatePodState(pod);
+
+        // Check if Pod can be liquidated
+        if(!isPodLiquidable(pod)) revert Errors.PodNotLiquidable();
+
+        Pod storage _pod = pods[pod];
+        uint256 owedFees = _pod.accruedFees;
+
+        // get amount of collateral to liquidate
+        uint256 collateralAmount = IOracleModule(oracleModule).getCollateralAmount(_pod.collateral, owedFees);
+
+        // liquidate & send to swapper
+        DullahanPod(pod).liquidateCollateral(collateralAmount, swapModule);
+
+        // trigger swapper
+        uint256 receivedFeeAmount = ISwapModule(swapModule).swapCollateralToFees(_pod.collateral, collateralAmount);
+
+        // Reset owed fees for the Pod & add fees to Reserve
+        _pod.accruedFees = 0;
+        reserveAmount += receivedFeeAmount;
+
+        emit LiquidatedPod(pod, _pod.collateral, collateralAmount, receivedFeeAmount);
+
+        return true;
+    }
+
+    // method to liquidate by paying GHO to get part of the pod collateral ?
+
     function updatePodDelegation(address pod) public {
+        if(pods[pod].podAddress == address(0)) revert Errors.PodInvalid();
+
         DullahanPod(pod).updateDelegation(DullahanVault(vault).getDelegate());
     }
 
@@ -167,6 +269,26 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
             updatePodDelegation(podList[i]);
             unchecked { ++i; }
         }
+    }
+
+    function processReserve() external nonReentrant returns(bool) {
+        if(!_updateGlobalState()) revert Errors.FailStateUpdate();
+        uint256 currentReserveAmount = reserveAmount;
+        if(currentReserveAmount == 0) return true;
+
+        reserveAmount = 0;
+
+        IERC20 _gho = IERC20(GHO);
+        uint256 protocolFees = (currentReserveAmount * protocolFeeRatio) / MAX_BPS;
+        _gho.safeTransfer(protocolFeeChest, protocolFees);
+
+        uint256 stakingRewardsAmount = currentReserveAmount - protocolFees;
+        IDullahanRewardsStaking(rewardsStaking).queueRewards(GHO, stakingRewardsAmount);
+        _gho.safeTransfer(rewardsStaking, stakingRewardsAmount);
+
+        emit ReserveProcessed(stakingRewardsAmount);
+
+        return true;
     }
 
 
@@ -181,9 +303,11 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         uint256 rentAmount = neededStkAaveAmount > currentStkAaveBalance ? neededStkAaveAmount - currentStkAaveBalance : 0;
 
         if(rentAmount > 0) {
+            pods[pod].rentedAmount += rentAmount;
+
             DullahanVault(vault).rentStkAave(pod, rentAmount);
 
-            // event ?
+            emit RentedStkAave(pod, rentAmount);
         }
 
         return true;
@@ -191,9 +315,23 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
     function notifyStkAaveClaim(uint256 claimedAmount) external nonReentrant isValidPod {
         address _pod = msg.sender;
+
+        _updatePodState(_pod);
+
+        pods[_pod].rentedAmount += claimedAmount;
+
         DullahanVault(vault).notifyRentedAmount(_pod, claimedAmount);
 
-        // event ?
+        emit RentedStkAave(_pod, claimedAmount);
+    }
+
+    function notifyPayFee(uint256 feeAmount) external nonReentrant isValidPod {
+        address _pod = msg.sender;
+        pods[_pod].accruedFees -= feeAmount;
+
+        reserveAmount += feeAmount;
+
+        emit PaidFees(_pod, feeAmount);
     }
 
 
@@ -202,6 +340,38 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     function _calculatedNeededStkAave(address pod, uint256 addedDebtAmount) internal returns(uint256) {
         // to do
         return 0;
+    }
+
+    function _updateGlobalState() internal returns(bool) {
+        if(block.timestamp <= lastIndexUpdate) return true;
+
+        uint256 elapsedTime = block.timestamp - lastIndexUpdate;
+        lastIndexUpdate = block.timestamp;
+
+        // Fee (in GHO) per rented stkAave per second
+        uint256 currentFeePerSec = IFeeModule(feeModule).getCurrentFeePerSecond();
+        uint256 accruedIndex = currentFeePerSec * elapsedTime;
+
+        currentIndex = currentIndex + accruedIndex;
+
+        return true;
+    }
+
+    function _updatePodState(address podAddress) internal returns(bool) {
+        if(!_updateGlobalState()) revert Errors.FailStateUpdate();
+
+        Pod storage _pod = pods[podAddress];
+
+        uint256 _currentIndex = currentIndex;
+        uint256 _oldPodIndex = _pod.lastIndex;
+        _pod.lastIndex = _currentIndex;
+        _pod.lastUpdate = block.timestamp;
+
+        if(_pod.rentedAmount != 0 && _oldPodIndex != _currentIndex){
+            _pod.accruedFees += (_currentIndex - _oldPodIndex) * _pod.rentedAmount;
+        }
+
+        return true;
     }
 
 
@@ -226,5 +396,49 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         emit CollateralUpdated(collateral, allowed);
     }
 
+    function updateFeeModule(address newModule) external onlyOwner {
+        if(newModule == address(0)) revert Errors.AddressZero();
+
+        address oldMoldule = feeModule;
+        feeModule = newModule;
+
+        emit FeeModuleUpdated(oldMoldule, newModule);
+    }
+
+    function updateSwapModule(address newModule) external onlyOwner {
+        if(newModule == address(0)) revert Errors.AddressZero();
+
+        address oldMoldule = swapModule;
+        swapModule = newModule;
+
+        emit SwapModuleUpdated(oldMoldule, newModule);
+    }
+
+    function updateOraclepModule(address newModule) external onlyOwner {
+        if(newModule == address(0)) revert Errors.AddressZero();
+
+        address oldMoldule = oracleModule;
+        oracleModule = newModule;
+
+        emit OracleModuleUpdated(oldMoldule, newModule);
+    }
+
+    function updateMintFeeRatio(uint256 newRatio) external onlyOwner {
+        if(newRatio > 500) revert Errors.InvalidParameter();
+
+        uint256 oldRatio = mintFeeRatio;
+        mintFeeRatio = newRatio;
+
+        emit MintFeeRatioUpdated(oldRatio, newRatio);
+    }
+
+    function updateProtocolFeeRatio(uint256 newRatio) external onlyOwner {
+        if(newRatio > 2500) revert Errors.InvalidParameter();
+
+        uint256 oldRatio = protocolFeeRatio;
+        protocolFeeRatio = newRatio;
+
+        emit ProtocolFeeRatioUpdated(oldRatio, newRatio);
+    }
 
 }
