@@ -16,6 +16,8 @@ library Errors {
     error InvalidParameter();
     error CannotRecoverToken();
     error NullWithdraw();
+    error AlreadyListedManager();
+    error NotListedManager();
 
     // Access Control Erros
     error CallerNotAdmin();

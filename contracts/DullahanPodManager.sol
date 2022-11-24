@@ -1,3 +1,11 @@
+//██████╗  █████╗ ██╗      █████╗ ██████╗ ██╗███╗   ██╗
+//██╔══██╗██╔══██╗██║     ██╔══██╗██╔══██╗██║████╗  ██║
+//██████╔╝███████║██║     ███████║██║  ██║██║██╔██╗ ██║
+//██╔═══╝ ██╔══██║██║     ██╔══██║██║  ██║██║██║╚██╗██║
+//██║     ██║  ██║███████╗██║  ██║██████╔╝██║██║ ╚████║
+//╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═════╝ ╚═╝╚═╝  ╚═══╝
+
+
 pragma solidity 0.8.16;
 //SPDX-License-Identifier: MIT
 
@@ -68,7 +76,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
     address public protocolFeeChest;
 
-    uint256 public currentIndex;
+    uint256 public lastUpdatedIndex;
     uint256 public lastIndexUpdate;
 
     uint256 public mintFeeRatio = 50; // BPS: 0.5%
@@ -146,9 +154,13 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
     // View functions
 
+    function getCurrentIndex() public view returns(uint256) {
+        return lastUpdatedIndex + _accruedIndex();
+    }
+
     function podCurrentOwedFees(address pod) public view returns(uint256) {
-        // to calculations here based on last index update
-        return 0; // to do
+        if(pods[pod].lastIndex == 0) return 0;
+        return pods[pod].accruedFees + (getCurrentIndex() - pods[pod].lastIndex) * pods[pod].rentedAmount;
     }
 
     function podOwedFees(address pod) public view returns(uint256) {
@@ -237,13 +249,19 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         Pod storage _pod = pods[pod];
         uint256 owedFees = _pod.accruedFees;
 
-        // get amount of collateral to liquidate
+        // Get the current amount of collateral left in the Pod (from the aToken balance of the Pod, since 1:1 with collateral)
+        // (should not have conversion issues since aTokens have the same amount of decimals than the asset)
+        uint256 podCollateralBalance = IERC20(aTokenForCollateral[_pod.collateral]).balanceOf(pod);
+        // Get amount of collateral to liquidate
         uint256 collateralAmount = IOracleModule(oracleModule).getCollateralAmount(_pod.collateral, owedFees);
+        // If the Pod doesn't have enough collateral left to cover all the fees owed,
+        // take all the collateral (the whole aToken balance).
+        collateralAmount = collateralAmount > podCollateralBalance ? podCollateralBalance : collateralAmount;
 
-        // liquidate & send to swapper
+        // Liquidate & send to swapper
         DullahanPod(pod).liquidateCollateral(collateralAmount, swapModule);
 
-        // trigger swapper
+        // Trigger swapper
         uint256 receivedFeeAmount = ISwapModule(swapModule).swapCollateralToFees(_pod.collateral, collateralAmount);
 
         // Reset owed fees for the Pod & add fees to Reserve
@@ -342,17 +360,21 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         return 0;
     }
 
-    function _updateGlobalState() internal returns(bool) {
-        if(block.timestamp <= lastIndexUpdate) return true;
+    function _accruedIndex() internal view returns(uint256) {
+        if(block.timestamp <= lastIndexUpdate) return 0;
 
         uint256 elapsedTime = block.timestamp - lastIndexUpdate;
-        lastIndexUpdate = block.timestamp;
 
         // Fee (in GHO) per rented stkAave per second
         uint256 currentFeePerSec = IFeeModule(feeModule).getCurrentFeePerSecond();
-        uint256 accruedIndex = currentFeePerSec * elapsedTime;
+        return currentFeePerSec * elapsedTime;
+    }
 
-        currentIndex = currentIndex + accruedIndex;
+    function _updateGlobalState() internal returns(bool) {
+        uint256 accruedIndex = _accruedIndex();
+
+        lastIndexUpdate = block.timestamp;
+        lastUpdatedIndex = lastUpdatedIndex + accruedIndex;
 
         return true;
     }
@@ -362,13 +384,13 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
         Pod storage _pod = pods[podAddress];
 
-        uint256 _currentIndex = currentIndex;
+        uint256 _lastUpdatedIndex = lastUpdatedIndex;
         uint256 _oldPodIndex = _pod.lastIndex;
-        _pod.lastIndex = _currentIndex;
+        _pod.lastIndex = _lastUpdatedIndex;
         _pod.lastUpdate = block.timestamp;
 
-        if(_pod.rentedAmount != 0 && _oldPodIndex != _currentIndex){
-            _pod.accruedFees += (_currentIndex - _oldPodIndex) * _pod.rentedAmount;
+        if(_pod.rentedAmount != 0 && _oldPodIndex != _lastUpdatedIndex){
+            _pod.accruedFees += (_lastUpdatedIndex - _oldPodIndex) * _pod.rentedAmount;
         }
 
         return true;
