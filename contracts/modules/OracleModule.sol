@@ -31,12 +31,10 @@ contract OracleModule is IOracleModule {
 
 
     // Functions
-    function getCollateralAmount(address collateral, uint256 feeAmount) external view returns(uint256 collateralAmount) {
+    function getCollateralAmount(address collateral, uint256 feeAmount) external view returns(uint256) {
         uint256 collateralDecimals = IERC20Metadata(collateral).decimals();
 
         IAaveOracle _oracle = IAaveOracle(AAVE_ORACLE);
-
-        //uint256 priceScale = _oracle.BASE_CURRENCY_UNIT(); => not needed since all prices should be with the same scale
 
         uint256 collateralPrice = _oracle.getAssetPrice(collateral);
         uint256 feePrice = _oracle.getAssetPrice(GHO);
@@ -47,6 +45,21 @@ contract OracleModule is IOracleModule {
             return ((feeAmount * feePrice) / (10**(GHO_DECIMALS - collateralDecimals))) / collateralPrice;
         }
 
+    }
+
+    function getFeeAmount(address collateral, uint256 collateralAmount) external view returns(uint256) {
+        uint256 collateralDecimals = IERC20Metadata(collateral).decimals();
+
+        IAaveOracle _oracle = IAaveOracle(AAVE_ORACLE);
+
+        uint256 collateralPrice = _oracle.getAssetPrice(collateral);
+        uint256 feePrice = _oracle.getAssetPrice(GHO);
+
+        if(collateralDecimals > GHO_DECIMALS) {
+            return ((collateralAmount * collateralPrice) / (10**(collateralDecimals - GHO_DECIMALS))) / feePrice;
+        } else {
+            return ((collateralAmount * collateralPrice) * (10**(GHO_DECIMALS - collateralDecimals))) / feePrice;
+        }
     }
 
 }

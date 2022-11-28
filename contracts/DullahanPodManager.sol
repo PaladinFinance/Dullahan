@@ -19,7 +19,6 @@ import "./DullahanVault.sol";
 import "./DullahanPod.sol";
 import "./interfaces/IDullahanRewardsStaking.sol";
 import "./interfaces/IFeeModule.sol";
-import "./interfaces/ISwapModule.sol";
 import "./interfaces/IOracleModule.sol";
 import {Errors} from "./utils/Errors.sol";
 
@@ -71,7 +70,6 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     address[] public allPods;
 
     address public feeModule;
-    address public swapModule;
     address public oracleModule;
 
     address public protocolFeeChest;
@@ -79,6 +77,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     uint256 public lastUpdatedIndex;
     uint256 public lastIndexUpdate;
 
+    uint256 public extraLiquidationRatio = 500; // BPS: 5%
     uint256 public mintFeeRatio = 50; // BPS: 0.5%
     uint256 public protocolFeeRatio = 500; // BPS: 5%
 
@@ -106,11 +105,11 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     event CollateralUpdated(address indexed collateral, bool allowed);
 
     event FeeModuleUpdated(address indexed oldMoldule, address indexed newModule);
-    event SwapModuleUpdated(address indexed oldMoldule, address indexed newModule);
     event OracleModuleUpdated(address indexed oldMoldule, address indexed newModule);
 
     event MintFeeRatioUpdated(uint256 oldRatio, uint256 newRatio);
     event ProtocolFeeRatioUpdated(uint256 oldRatio, uint256 newRatio);
+    event ExtraLiquidationRatioUpdated(uint256 oldRatio, uint256 newRatio);
 
 
     // Modifers
@@ -129,7 +128,6 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         address _protocolFeeChest,
         address _podImplementation,
         address _feeModule,
-        address _swapModule,
         address _oracleModule
     ) {
         if(
@@ -138,7 +136,6 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
             || _protocolFeeChest == address(0)
             || _podImplementation == address(0)
             || _feeModule == address(0)
-            || _swapModule == address(0)
             || _oracleModule == address(0)
         ) revert Errors.AddressZero();
 
@@ -147,7 +144,6 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         protocolFeeChest = _protocolFeeChest;
         podImplementation = _podImplementation;
         feeModule = _feeModule;
-        swapModule = _swapModule;
         oracleModule = _oracleModule;
     }
 
@@ -176,6 +172,39 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         // but still owes fees to Dullahan, but the Pod logic forces to pay fees before
         // repaying debt to Aave.
         return IERC20(DEBT_GHO).balanceOf(pod) == 0 && pods[pod].accruedFees > 0;
+    }
+
+    function estimatePodLiquidationexternal(address pod) external view returns(
+        uint256 feeAmount,
+        uint256 collateralAmount
+    ) {
+        if(pods[pod].podAddress == address(0)) revert Errors.PodInvalid();
+        // Check if Pod can be liquidated
+        if(!isPodLiquidable(pod)) revert Errors.PodNotLiquidable();
+
+        Pod storage _pod = pods[pod];
+        uint256 owedFees = podCurrentOwedFees(pod);
+
+        // Get the current amount of collateral left in the Pod (from the aToken balance of the Pod, since 1:1 with collateral)
+        // (should not have conversion issues since aTokens have the same amount of decimals than the asset)
+        uint256 podCollateralBalance = IERC20(aTokenForCollateral[_pod.collateral]).balanceOf(pod);
+        // Get amount of collateral to liquidate
+        collateralAmount = IOracleModule(oracleModule).getCollateralAmount(_pod.collateral, owedFees);
+        // Extra ratio on amount to liquidate: Penality + liquidation bonus
+        collateralAmount = (collateralAmount * extraLiquidationRatio) / MAX_BPS;
+
+        // If the Pod doesn't have enough collateral left to cover all the fees owed,
+        // take all the collateral (the whole aToken balance).
+        feeAmount = owedFees;
+        if(collateralAmount > podCollateralBalance) {
+            collateralAmount = podCollateralBalance;
+
+            // to do here : calculate the reduced amount of fees to be received based on real collateral amount we can get
+            feeAmount = IOracleModule(oracleModule).getFeeAmount(
+                _pod.collateral,
+                (collateralAmount * (MAX_BPS - extraLiquidationRatio)) / MAX_BPS
+            );
+        }
     }
 
 
@@ -241,10 +270,20 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     function liquidatePod(address pod) external nonReentrant returns(bool) {
         if(pods[pod].podAddress == address(0)) revert Errors.PodInvalid();
 
+        address liquidator = msg.sender;
+
         _updatePodState(pod);
 
         // Check if Pod can be liquidated
         if(!isPodLiquidable(pod)) revert Errors.PodNotLiquidable();
+
+        // Free any remaining stkAave in the Pod
+        uint256 currentStkAaveBalance = IERC20(STK_AAVE).balanceOf(pod);
+        if(currentStkAaveBalance > 0) {
+            DullahanVault(vault).pullRentedStkAave(pod, currentStkAaveBalance);
+
+            emit FreedStkAave(pod, currentStkAaveBalance);
+        }
 
         Pod storage _pod = pods[pod];
         uint256 owedFees = _pod.accruedFees;
@@ -254,21 +293,32 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         uint256 podCollateralBalance = IERC20(aTokenForCollateral[_pod.collateral]).balanceOf(pod);
         // Get amount of collateral to liquidate
         uint256 collateralAmount = IOracleModule(oracleModule).getCollateralAmount(_pod.collateral, owedFees);
+        // Extra ratio on amount to liquidate: Penality + liquidation bonus
+        collateralAmount = (collateralAmount * extraLiquidationRatio) / MAX_BPS;
+
         // If the Pod doesn't have enough collateral left to cover all the fees owed,
         // take all the collateral (the whole aToken balance).
-        collateralAmount = collateralAmount > podCollateralBalance ? podCollateralBalance : collateralAmount;
+        uint256 paidFees = owedFees;
+        if(collateralAmount > podCollateralBalance) {
+            collateralAmount = podCollateralBalance;
 
-        // Liquidate & send to swapper
-        DullahanPod(pod).liquidateCollateral(collateralAmount, swapModule);
+            // to do here : calculate the reduced amount of fees to be received based on real collateral amount we can get
+            paidFees = IOracleModule(oracleModule).getFeeAmount(
+                _pod.collateral,
+                (collateralAmount * (MAX_BPS - extraLiquidationRatio)) / MAX_BPS
+            );
+        }
 
-        // Trigger swapper
-        uint256 receivedFeeAmount = ISwapModule(swapModule).swapCollateralToFees(_pod.collateral, collateralAmount);
+        IERC20(GHO).transferFrom(liquidator, address(this), paidFees);
 
         // Reset owed fees for the Pod & add fees to Reserve
         _pod.accruedFees = 0;
-        reserveAmount += receivedFeeAmount;
+        reserveAmount += paidFees;
 
-        emit LiquidatedPod(pod, _pod.collateral, collateralAmount, receivedFeeAmount);
+        // Liquidate & send to swapper
+        DullahanPod(pod).liquidateCollateral(collateralAmount, liquidator);
+
+        emit LiquidatedPod(pod, _pod.collateral, collateralAmount, paidFees);
 
         return true;
     }
@@ -427,15 +477,6 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         emit FeeModuleUpdated(oldMoldule, newModule);
     }
 
-    function updateSwapModule(address newModule) external onlyOwner {
-        if(newModule == address(0)) revert Errors.AddressZero();
-
-        address oldMoldule = swapModule;
-        swapModule = newModule;
-
-        emit SwapModuleUpdated(oldMoldule, newModule);
-    }
-
     function updateOraclepModule(address newModule) external onlyOwner {
         if(newModule == address(0)) revert Errors.AddressZero();
 
@@ -461,6 +502,15 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         protocolFeeRatio = newRatio;
 
         emit ProtocolFeeRatioUpdated(oldRatio, newRatio);
+    }
+
+    function updateExtraLiquidationRatio(uint256 newRatio) external onlyOwner {
+        if(newRatio > 2500) revert Errors.InvalidParameter();
+
+        uint256 oldRatio = extraLiquidationRatio;
+        extraLiquidationRatio = newRatio;
+
+        emit ExtraLiquidationRatioUpdated(oldRatio, newRatio);
     }
 
 }
