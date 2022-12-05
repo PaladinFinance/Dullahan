@@ -185,11 +185,11 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
     }
 
     function maxDeposit(address user) public view returns (uint256) {
-        return IERC20(STK_AAVE).balanceOf(user);
+        return type(uint256).max;
     }
 
     function maxMint(address user) public view returns (uint256) {
-        return IERC20(STK_AAVE).balanceOf(user);
+        return type(uint256).max;
     }
 
     function maxWithdraw(address owner) public view returns (uint256) {
