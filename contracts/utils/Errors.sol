@@ -70,4 +70,7 @@ library Errors {
     error FailStateUpdate();
     error PodNotLiquidable();
 
+    // Registry Errors
+    error VaultAlreadySet();
+
 }

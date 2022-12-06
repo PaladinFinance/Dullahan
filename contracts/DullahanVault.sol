@@ -29,12 +29,12 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
     // Constants
     uint256 public constant MAX_BPS = 10000;
 
-    address public constant STK_AAVE = 0x4da27a545c0c5B758a6BA100e3a049001de870f5;
-    address public constant AAVE = 0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9;
-
     uint256 private constant SEED_DEPOSIT = 0.001 ether;
 
     uint256 private constant INITIAL_INDEX = 1e18;
+
+    address public immutable STK_AAVE;
+    address public immutable AAVE;
 
 
     // Struct
@@ -109,15 +109,20 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
     constructor(
         address _admin,
         uint256 _reserveRatio,
+        address _aave,
+        address _stkAave,
         string memory _name,
         string memory _symbol
     ) ScalingERC20(_name, _symbol) {
-        if(_admin == address(0)) revert Errors.AddressZero();
+        if(_admin == address(0) || _aave == address(0) || _stkAave == address(0)) revert Errors.AddressZero();
         if(_reserveRatio == 0) revert Errors.NullAmount();
 
         admin = _admin;
 
         reserveRatio = _reserveRatio;
+
+        AAVE = _aave;
+        STK_AAVE = _stkAave;
     }
 
     function init(address _votingPowerManager) external onlyAdmin {
@@ -140,7 +145,7 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
 
     // View functions
 
-    function asset() external pure returns (address) {
+    function asset() external view returns (address) {
         return STK_AAVE;
     }
 
