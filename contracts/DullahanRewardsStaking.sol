@@ -442,6 +442,20 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
 
 
     // Admin functions
+    
+    /**
+     * @notice Pause the contract
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @notice Unpause the contract
+     */
+    function unpause() external onlyOwner {
+        _unpause();
+    }
 
     function addRewardDepositor(address depositor) external onlyOwner {
         if(depositor == address(0)) revert Errors.AddressZero();

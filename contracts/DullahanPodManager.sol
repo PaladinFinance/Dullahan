@@ -212,7 +212,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
     function createPod(
         address collateral
-    ) external nonReentrant returns(address) {
+    ) external nonReentrant whenNotPaused returns(address) {
         if(collateral == address(0)) revert Errors.AddressZero();
         if(!allowedCollaterals[collateral]) revert Errors.CollateralNotAllowed();
         if(!_updateGlobalState()) revert Errors.FailStateUpdate();
@@ -244,7 +244,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         return newPod;
     }
 
-    function updatePodState(address pod) external nonReentrant returns(bool) {
+    function updatePodState(address pod) external nonReentrant whenNotPaused returns(bool) {
         if(pods[pod].podAddress == address(0)) revert Errors.PodInvalid();
 
         return _updatePodState(pod);
@@ -253,6 +253,8 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     function freeStkAave(address pod) external nonReentrant returns(bool) {
         if(!_updatePodState(address(this))) revert Errors.FailPodStateUpdate();
         if(pods[pod].podAddress == address(0)) revert Errors.PodInvalid();
+        
+        DullahanPod(pod).compoundStkAave();
 
         uint256 neededStkAaveAmount = _calculatedNeededStkAave(pod, 0);
         uint256 currentStkAaveBalance = IERC20(DullahanRegistry(registry).STK_AAVE()).balanceOf(pod);
@@ -279,6 +281,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         if(!isPodLiquidable(pod)) revert Errors.PodNotLiquidable();
 
         // Free any remaining stkAave in the Pod
+        DullahanPod(pod).compoundStkAave();
         uint256 currentStkAaveBalance = IERC20(DullahanRegistry(registry).STK_AAVE()).balanceOf(pod);
         if(currentStkAaveBalance > 0) {
             DullahanVault(vault).pullRentedStkAave(pod, currentStkAaveBalance);
@@ -324,9 +327,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         return true;
     }
 
-    // method to liquidate by paying GHO to get part of the pod collateral ?
-
-    function updatePodDelegation(address pod) public {
+    function updatePodDelegation(address pod) public whenNotPaused {
         if(pods[pod].podAddress == address(0)) revert Errors.PodInvalid();
 
         DullahanPod(pod).updateDelegation(DullahanVault(vault).getDelegate());
@@ -363,7 +364,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         }
     }
 
-    function processReserve() external nonReentrant returns(bool) {
+    function processReserve() external nonReentrant whenNotPaused returns(bool) {
         if(!_updateGlobalState()) revert Errors.FailStateUpdate();
         uint256 currentReserveAmount = reserveAmount;
         if(currentReserveAmount == 0) return true;
@@ -387,7 +388,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
     // Pods only functions
 
-    function getStkAave(uint256 amountToMint) external nonReentrant isValidPod returns(bool){
+    function getStkAave(uint256 amountToMint) external nonReentrant whenNotPaused isValidPod returns(bool){
         address pod = msg.sender;
 
         uint256 neededStkAaveAmount = _calculatedNeededStkAave(pod, amountToMint);
@@ -473,6 +474,20 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
 
     // Admin functions
+    
+    /**
+     * @notice Pause the contract
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @notice Unpause the contract
+     */
+    function unpause() external onlyOwner {
+        _unpause();
+    }
 
     function addCollateral(address collateral, address aToken) external onlyOwner {
         if(collateral == address(0) || aToken == address(0)) revert Errors.AddressZero();

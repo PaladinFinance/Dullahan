@@ -84,9 +84,16 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
 
     event NewPodManager(address indexed newManager);
     event BlockedPodManager(address indexed manager);
+
+    event ReserveDeposit(address indexed from, uint256 amount);
+    event ReserveWithdraw(address indexed to, uint256 amount);
+
     event UpdatedVotingPowerManager(address indexed oldManager, address indexed newManager);
     event UpdatedReserveManager(address indexed oldManager, address indexed newManager);
     event UpdatedBufferRatio(uint256 oldRatio, uint256 newRatio);
+
+    /** @notice Event emitted when an ERC20 token is recovered */
+    event TokenRecovered(address indexed token, uint256 amount);
 
 
     // Modifers
@@ -444,7 +451,21 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
     }
 
 
-    // Admin functions
+    // Admin 
+    
+    /**
+     * @notice Pause the contract
+     */
+    function pause() external onlyAdmin {
+        _pause();
+    }
+
+    /**
+     * @notice Unpause the contract
+     */
+    function unpause() external onlyAdmin {
+        _unpause();
+    }
 
     function transferAdmin(address newAdmin) external onlyAdmin {
         if (newAdmin == address(0)) revert Errors.AddressZero();
@@ -482,7 +503,7 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
 
         podManagers[manager].rentingAllowed = false;
 
-        emit NewPodManager(manager);
+        emit BlockedPodManager(manager);
     }
 
     function updateVotingPowerManager(address newManager) external onlyAdmin {
@@ -527,15 +548,18 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
 
         _getStkAaveRewards();
 
-        reserveAmount = reserveAmount + amount;
+        reserveAmount += amount;
         IERC20(STK_AAVE).safeTransferFrom(from, address(this), amount);
+
+        emit ReserveDeposit(from, amount);
 
         return true;
     }
 
     /**
-     * @notice Withdraw tokens from the reserve to send to the Reserve Manager
+     * @notice Withdraw tokens from the reserve to send to the given receiver
      * @param amount Amount of token to withdraw
+     * @param receiver Address to receive the tokens
      */
     function withdrawFromReserve(uint256 amount, address receiver) external onlyAllowed returns(bool) {
         if(amount == 0) revert Errors.NullAmount();
@@ -544,8 +568,28 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
 
         _getStkAaveRewards();
 
-        reserveAmount = reserveAmount - amount;
+        reserveAmount -= amount;
         IERC20(STK_AAVE).safeTransfer(receiver, amount);
+
+        emit ReserveWithdraw(receiver, amount);
+
+        return true;
+    }
+
+    /**
+    * @notice Recover ERC2O tokens sent by mistake to the contract
+    * @dev Recover ERC2O tokens sent by mistake to the contract
+    * @param token Address of the ERC2O token
+    * @return bool: success
+    */
+    function recoverERC20(address token) external onlyAdmin returns(bool) {
+        if(token == AAVE || token == STK_AAVE) revert Errors.CannotRecoverToken();
+
+        uint256 amount = IERC20(token).balanceOf(address(this));
+        if(amount == 0) revert Errors.NullAmount();
+        IERC20(token).safeTransfer(admin, amount);
+
+        emit TokenRecovered(token, amount);
 
         return true;
     }
