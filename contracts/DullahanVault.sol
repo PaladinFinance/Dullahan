@@ -18,6 +18,7 @@ import "./oz/utils/Pausable.sol";
 import "./interfaces/IStakedAave.sol";
 import "./interfaces/IGovernancePowerDelegationToken.sol";
 import {Errors} from "./utils/Errors.sol";
+import {WadRayMath} from  "./utils/WadRayMath.sol";
 
 /** @title DullahanVault contract
  *  @author Paladin
@@ -25,13 +26,13 @@ import {Errors} from "./utils/Errors.sol";
  */
 contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
+    using WadRayMath for uint256;
 
     // Constants
     uint256 public constant MAX_BPS = 10000;
+    uint256 public constant MAX_UINT256 = 2**256 - 1;
 
     uint256 private constant SEED_DEPOSIT = 0.001 ether;
-
-    uint256 private constant INITIAL_INDEX = 1e18;
 
     address public immutable STK_AAVE;
     address public immutable AAVE;
@@ -71,10 +72,6 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
     event NotifyRentedAmount(address indexed manager, address indexed pod, uint256 addedAmount);
     event PullFromPod(address indexed manager, address indexed pod, uint256 amount);
 
-    event ReserveManagerUpdated(
-        address indexed oldManager,
-        address indexed newManager
-    );
 
     event AdminTransferred(
         address indexed previousAdmin,
@@ -88,13 +85,20 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
     event NewPodManager(address indexed newManager);
     event BlockedPodManager(address indexed manager);
     event UpdatedVotingPowerManager(address indexed oldManager, address indexed newManager);
+    event UpdatedReserveManager(address indexed oldManager, address indexed newManager);
     event UpdatedBufferRatio(uint256 oldRatio, uint256 newRatio);
 
 
     // Modifers
 
     modifier onlyAdmin() {
-        if (_msgSender() != admin) revert Errors.CallerNotAdmin();
+        if (msg.sender != admin) revert Errors.CallerNotAdmin();
+        _;
+    }
+
+    modifier onlyAllowed() {
+        // Only admin & reserveManager
+        if (msg.sender != admin && msg.sender != reserveManager) revert Errors.CallerNotAdmin();
         _;
     }
 
@@ -109,17 +113,19 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
     constructor(
         address _admin,
         uint256 _reserveRatio,
+        address _reserveManager,
         address _aave,
         address _stkAave,
         string memory _name,
         string memory _symbol
     ) ScalingERC20(_name, _symbol) {
-        if(_admin == address(0) || _aave == address(0) || _stkAave == address(0)) revert Errors.AddressZero();
+        if(_admin == address(0) || _reserveManager == address(0) || _aave == address(0) || _stkAave == address(0)) revert Errors.AddressZero();
         if(_reserveRatio == 0) revert Errors.NullAmount();
 
         admin = _admin;
 
         reserveRatio = _reserveRatio;
+        reserveManager = _reserveManager;
 
         AAVE = _aave;
         STK_AAVE = _stkAave;
@@ -127,6 +133,8 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
 
     function init(address _votingPowerManager) external onlyAdmin {
         if(initialized) revert Errors.AlreadyInitialized();
+
+        initialized = true;
 
         votingPowerManager = _votingPowerManager;
 
@@ -205,6 +213,10 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         return balanceOf(owner);
     }
 
+    function getCurrentIndex() public view returns(uint256) {
+        return _getCurrentIndex();
+    }
+
     function getDelegate() external view returns(address) {
         return votingPowerManager;
     }
@@ -225,7 +237,7 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         uint256 shares,
         address receiver
         ) public isInitialized nonReentrant whenNotPaused returns (uint256 assets) {
-        (assets, shares) = _deposit(assets, receiver, msg.sender);
+        (assets, shares) = _deposit(shares, receiver, msg.sender);
 
         emit Deposit(msg.sender, receiver, assets, shares);
     }
@@ -237,6 +249,7 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
     ) public isInitialized nonReentrant returns (uint256 shares) {
         (uint256 _withdrawn, uint256 _burntShares) = _withdraw(
             assets,
+            owner,
             receiver,
             msg.sender
         );
@@ -252,6 +265,7 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
     ) public isInitialized nonReentrant returns (uint256 assets) {
         (uint256 _withdrawn, uint256 _burntShares) = _withdraw(
             shares,
+            owner,
             receiver,
             msg.sender
         );
@@ -313,7 +327,7 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
 
         _getStkAaveRewards();
 
-        // We consider that pod give MAX_UNIT256 allowance to this contract when created
+        // We consider that pod give MAX_UINT256 allowance to this contract when created
         IERC20(STK_AAVE).safeTransferFrom(pod, address(this), amount);
         podManagers[manager].totalRented -= safe128(amount);
         totalRentedAmount -= amount;
@@ -325,11 +339,8 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
     // Internal functions
 
     function _getCurrentIndex() internal view override returns (uint256) {
-        if(_totalSupply == 0) {
-            return INITIAL_INDEX;
-        } else {
-            return (totalAssets() * UNIT) / _totalSupply;
-        }
+        if(_totalSupply == 0) return INITIAL_INDEX;
+        return totalAssets().rayDiv(_totalSupply);
     }
 
     function _deposit(
@@ -337,13 +348,18 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         address receiver,
         address depositor
     ) internal returns (uint256, uint256) {
+        if (receiver == address(0)) revert Errors.AddressZero();
         if (amount == 0) revert Errors.NullAmount();
 
         _getStkAaveRewards();
 
+        // We need to get the index before pulling the assets
+        // so we can have the correct one based on previous stkAave claim
+        uint256 _currentIndex = _getCurrentIndex();
+
         IERC20(STK_AAVE).safeTransferFrom(depositor, address(this), amount);
 
-        uint256 minted = _mint(receiver, amount);
+        uint256 minted = _mint(receiver, amount, _currentIndex);
 
         afterDeposit(amount);
 
@@ -352,18 +368,26 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
 
     function _withdraw(
         uint256 amount, // if `MAX_UINT256`, just withdraw everything
+        address owner,
         address receiver,
         address sender
     ) internal returns (uint256, uint256) {
+        if (receiver == address(0) || owner == address(0)) revert Errors.AddressZero();
         if (amount == 0) revert Errors.NullAmount();
 
         _getStkAaveRewards();
 
-        if (msg.sender != sender) {
-            uint256 allowed = _allowances[sender][msg.sender];
+        bool _maxWithdraw;
+        if(amount == MAX_UINT256) {
+            amount = balanceOf(owner);
+            _maxWithdraw = true;
+        }
+
+        if (owner != sender) {
+            uint256 allowed = _allowances[owner][sender];
             if (allowed < amount) revert Errors.ERC20_AmountOverAllowance();
             if (allowed != type(uint256).max)
-                _allowances[sender][msg.sender] = allowed - amount;
+                _allowances[owner][sender] = allowed - amount;
         }
 
         IERC20 _stkAave = IERC20(STK_AAVE);
@@ -372,7 +396,7 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         availableBalance = reserveAmount >= availableBalance ? 0 : availableBalance - reserveAmount;
         if(amount > availableBalance) revert Errors.NotEnoughAvailableFunds();
 
-        uint256 burned = _burn(sender, amount);
+        uint256 burned = _burn(owner, amount, _maxWithdraw);
 
         beforeWithdraw(amount);
 
@@ -389,10 +413,7 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         address from,
         address to,
         uint256 amount
-    ) internal isInitialized whenNotPaused override {
-        from; to; amount;
-        _getStkAaveRewards(); // keep that here ?
-    }
+    ) internal isInitialized whenNotPaused override {}
 
     function _afterTokenTransfer(
         address from,
@@ -403,21 +424,21 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
     function _getStkAaveRewards() internal {
         IStakedAave _stkAave = IStakedAave(STK_AAVE);
 
-        //Get pending rewards amount
+        // Get pending rewards amount
         uint256 pendingRewards = _stkAave.getTotalRewardsBalance(address(this));
 
         if (pendingRewards > 0) {
-            //claim the AAVE tokens
+            // Claim the AAVE tokens
             _stkAave.claimRewards(address(this), pendingRewards);
 
             reserveAmount += (pendingRewards * reserveRatio) / MAX_BPS;
         }
 
         IERC20 _aave = IERC20(AAVE);
-        uint256 currentBalance = IERC20(_aave).balanceOf(address(this));
+        uint256 currentBalance = _aave.balanceOf(address(this));
         
         if(currentBalance > 0) {
-            IERC20(_aave).safeIncreaseAllowance(STK_AAVE, currentBalance);
+            _aave.safeIncreaseAllowance(STK_AAVE, currentBalance);
             _stkAave.stake(address(this), currentBalance);
         }
     }
@@ -476,6 +497,16 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         emit UpdatedVotingPowerManager(oldManager, newManager);
     }
 
+    function updateReserveManager(address newManager) external onlyAdmin {
+        if(newManager == address(0)) revert Errors.AddressZero();
+        if(newManager == reserveManager) revert Errors.SameAddress();
+
+        address oldManager = reserveManager;
+        reserveManager = newManager;
+
+        emit UpdatedReserveManager(oldManager, newManager);
+    }
+
     function updateBufferRatio(uint256 newRatio) external onlyAdmin {
         if(newRatio > 1500) revert Errors.InvalidParameter();
 
@@ -490,7 +521,7 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
      * @param from Address to pull the tokens from
      * @param amount Amount of token to deposit
      */
-    function depositToReserve(address from, uint256 amount) external onlyAdmin returns(bool) {
+    function depositToReserve(address from, uint256 amount) external onlyAllowed returns(bool) {
         if(amount == 0) revert Errors.NullAmount();
         if(from == address(0)) revert Errors.AddressZero();
 
@@ -506,14 +537,15 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
      * @notice Withdraw tokens from the reserve to send to the Reserve Manager
      * @param amount Amount of token to withdraw
      */
-    function withdrawFromReserve(uint256 amount) external onlyAdmin returns(bool) {
+    function withdrawFromReserve(uint256 amount, address receiver) external onlyAllowed returns(bool) {
         if(amount == 0) revert Errors.NullAmount();
+        if(receiver == address(0)) revert Errors.AddressZero();
         if(amount > reserveAmount) revert Errors.ReserveTooLow();
 
         _getStkAaveRewards();
 
         reserveAmount = reserveAmount - amount;
-        IERC20(STK_AAVE).safeTransfer(reserveManager, amount);
+        IERC20(STK_AAVE).safeTransfer(receiver, amount);
 
         return true;
     }

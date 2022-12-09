@@ -49,22 +49,27 @@ contract DullahanTreasureChest is Owner, ReentrancyGuard {
     }
    
     /**
-    * @notice Approves the given amount for the given ERC20 token
-    * @dev Approves the given amount for the given ERC20 token
+    * @notice Increases the allowance of the spender of a given amount for the given ERC20 token
+    * @dev Increases the allowance of the spender of a given amount for the given ERC20 token
     * @param token Address of the ERC2O token
     * @param spender Address to approve for spending
-    * @param amount Amount to approve
+    * @param amount Amount to increase
     */
-    function approveERC20(address token, address spender, uint256 amount) external onlyAllowed nonReentrant {
-        uint256 currentAllowance = IERC20(token).allowance(address(this), spender);
+    function increaseAllowanceERC20(address token, address spender, uint256 amount) external onlyAllowed nonReentrant {
+        if(amount == 0) revert Errors.NullAmount();
+        IERC20(token).safeIncreaseAllowance(spender, amount);
+    }
 
-        if(currentAllowance < amount){
-            IERC20(token).safeIncreaseAllowance(spender, amount - currentAllowance);
-        }
-        else if(currentAllowance > amount){
-            IERC20(token).safeDecreaseAllowance(spender, currentAllowance - amount);
-        }
-        // Otherwise, allowance is already the required value, no need to change
+    /**
+    * @notice Decreases the allowance of the spender of a given amount for the given ERC20 token
+    * @dev Decreases the allowance of the spender of a given amount for the given ERC20 token
+    * @param token Address of the ERC2O token
+    * @param spender Address to approve for spending
+    * @param amount Amount to decrease
+    */
+    function decreaseAllowanceERC20(address token, address spender, uint256 amount) external onlyAllowed nonReentrant {
+        if(amount == 0) revert Errors.NullAmount();
+        IERC20(token).safeDecreaseAllowance(spender, amount);
     }
    
     /**

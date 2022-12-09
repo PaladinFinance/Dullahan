@@ -17,6 +17,7 @@ import "./oz/utils/ReentrancyGuard.sol";
 import "./oz/utils/Pausable.sol";
 import "./utils/Owner.sol";
 import {Errors} from "./utils/Errors.sol";
+import {WadRayMath} from  "./utils/WadRayMath.sol";
 
 /** @title DullahanRewardsStaking contract
  *  @author Paladin
@@ -25,6 +26,7 @@ import {Errors} from "./utils/Errors.sol";
  */
 contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
     using SafeERC20 for IERC20;
+    using WadRayMath for uint256;
 
 
     // Constants
@@ -32,7 +34,7 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
     /** @notice 1e18 scale */
     uint256 private constant UNIT = 1e18;
 
-    uint256 private constant INITIAL_INDEX = 1e18;
+    uint256 private constant INITIAL_INDEX = 1e27;
 
     uint256 private constant DISTRIBUTION_DURATION = 604800; // 1 week
 
@@ -146,8 +148,7 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
     }
 
     function userCurrentStakedAmount(address user) public view returns(uint256) {
-        uint256 currentIndex = _getCurrentIndex();
-        return (userScaledBalances[user] * currentIndex) / UNIT;
+        return userScaledBalances[user].rayMul(_getCurrentIndex());
     }
 
     function getUserRewardState(address reward, address user) external view returns(UserRewardState memory) {
@@ -187,8 +188,7 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
 
         IERC20(vault).safeTransferFrom(msg.sender, address(this), amount);
 
-        uint256 currentIndex = _getCurrentIndex();
-        uint256 scaledAmount = (amount * UNIT) / currentIndex;
+        uint256 scaledAmount = amount.rayDiv(_getCurrentIndex());
         if(scaledAmount == 0) revert Errors.NullScaledAmount();
 
         userScaledBalances[receiver] += scaledAmount;
@@ -206,8 +206,7 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         // We just want to update the reward states for the user who's balance gonna change
         _updateAllUserRewardStates(msg.sender);
 
-        uint256 currentIndex = _getCurrentIndex();
-        uint256 amount = (scaledAmount * currentIndex) / UNIT;
+        uint256 amount = scaledAmount.rayMul(_getCurrentIndex());
         if(amount == 0) revert Errors.NullAmount();
 
         userScaledBalances[msg.sender] -= scaledAmount;
@@ -315,11 +314,8 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
     // Internal functions
 
     function _getCurrentIndex() internal view returns(uint256) {
-        if(totalScaledAmount == 0) {
-            return INITIAL_INDEX;
-        } else {
-            return (totalAssets() * UNIT) / totalScaledAmount;
-        }
+        if(totalScaledAmount == 0) return INITIAL_INDEX;
+        return totalAssets().rayDiv(totalScaledAmount);
     }
 
     function _getNewRewardPerToken(address reward) internal view returns(uint256) {
