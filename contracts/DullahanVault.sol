@@ -290,7 +290,7 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
 
     function rentStkAave(address pod, uint256 amount) external nonReentrant {
         address manager = msg.sender;
-        if (!podManagers[manager].rentingAllowed) revert Errors.CallerNotAllowedManager();
+        if(!podManagers[manager].rentingAllowed) revert Errors.CallerNotAllowedManager();
         if(pod == address(0)) revert Errors.AddressZero();
         if(amount == 0) revert Errors.NullAmount();
 
@@ -314,7 +314,7 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
     // To track pods stkAave claims & re-stake into the main balance for ScalingeRC20 logic
     function notifyRentedAmount(address pod, uint256 addedAmount) external nonReentrant {
         address manager = msg.sender;
-        if (!podManagers[manager].rentingAllowed) revert Errors.CallerNotAllowedManager();
+        if(podManagers[manager].totalRented == 0) revert Errors.NotUndebtedManager();
         if(pod == address(0)) revert Errors.AddressZero();
         if(addedAmount == 0) revert Errors.NullAmount();
 
@@ -328,9 +328,10 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
 
     function pullRentedStkAave(address pod, uint256 amount)external nonReentrant {
         address manager = msg.sender;
-        if (podManagers[manager].totalRented == 0) revert Errors.NotUndebtedManager();
+        if(podManagers[manager].totalRented == 0) revert Errors.NotUndebtedManager();
         if(pod == address(0)) revert Errors.AddressZero();
         if(amount == 0) revert Errors.NullAmount();
+        if(amount > podManagers[manager].totalRented) revert Errors.AmountExceedsDebt();
 
         _getStkAaveRewards();
 

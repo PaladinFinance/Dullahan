@@ -45,6 +45,7 @@ library Errors {
     error ReserveTooLow();
     error CallerNotAllowedManager();
     error NotUndebtedManager();
+    error AmountExceedsDebt();
 
     // Vaults Rewards Errors
     error NullScaledAmount();
