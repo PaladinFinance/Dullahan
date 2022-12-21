@@ -40,6 +40,8 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
 
     uint256 private constant MAX_BPS = 10000;
 
+    uint256 private constant MAX_UINT256 = 2**256 - 1;
+
     uint256 private constant UPDATE_REWARD_RATIO = 8500; // 85 %
 
 
@@ -95,7 +97,7 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
     mapping(address => bool) public rewardDepositors;
 
     /** @notice Address allowed to claim for another user */
-    mapping(address => address) internal allowedClaimer;
+    mapping(address => address) public allowedClaimer;
 
 
     // Events
@@ -147,6 +149,14 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         return IScalingERC20(vault).balanceOf(address(this));
     }
 
+    function getCurrentIndex() external view returns(uint256) {
+        return _getCurrentIndex();
+    }
+
+    function getRewardList() public view returns(address[] memory) {
+        return rewardList;
+    }
+
     function userCurrentStakedAmount(address user) public view returns(uint256) {
         return userScaledBalances[user].rayMul(_getCurrentIndex());
     }
@@ -179,6 +189,7 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
 
     // State-changing functions
 
+    // Can give MAX_UINT256 to stake full balance
     function stake(uint256 amount, address receiver) external nonReentrant whenNotPaused returns(uint256) {
         if(amount == 0) revert Errors.NullAmount();
         if(receiver == address(0)) revert Errors.AddressZero();
@@ -186,10 +197,12 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         // We just want to update the reward states for the user who's balance gonna change
         _updateAllUserRewardStates(receiver);
 
-        IERC20(vault).safeTransferFrom(msg.sender, address(this), amount);
+        if(amount == MAX_UINT256) amount = IERC20(vault).balanceOf(msg.sender);
 
         uint256 scaledAmount = amount.rayDiv(_getCurrentIndex());
         if(scaledAmount == 0) revert Errors.NullScaledAmount();
+
+        IERC20(vault).safeTransferFrom(msg.sender, address(this), amount);
 
         userScaledBalances[receiver] += scaledAmount;
         totalScaledAmount += scaledAmount;
@@ -199,6 +212,7 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         return scaledAmount;
     }
 
+    // Can give MAX_UINT256 to unstake full balance
     function unstake(uint256 scaledAmount, address receiver) external nonReentrant returns(uint256) {
         if(scaledAmount == 0) revert Errors.NullScaledAmount();
         if(receiver == address(0)) revert Errors.AddressZero();
@@ -206,13 +220,15 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         // We just want to update the reward states for the user who's balance gonna change
         _updateAllUserRewardStates(msg.sender);
 
+        if(scaledAmount == MAX_UINT256) scaledAmount = userScaledBalances[msg.sender];
+
         uint256 amount = scaledAmount.rayMul(_getCurrentIndex());
         if(amount == 0) revert Errors.NullAmount();
 
         userScaledBalances[msg.sender] -= scaledAmount;
         totalScaledAmount -= scaledAmount;
 
-        IERC20(vault).safeTransfer(msg.sender, amount);
+        IERC20(vault).safeTransfer(receiver, amount);
 
         emit Unstaked(msg.sender, receiver, amount, scaledAmount);
 
@@ -264,6 +280,9 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         onlyRewardDepositors
         returns(bool) 
     {
+        if(amount == 0) revert Errors.NullAmount();
+        if(rewardToken == address(0)) revert Errors.AddressZero();
+
         RewardState storage state = rewardStates[rewardToken];
 
         if(state.lastUpdate == 0) { // new reward token
@@ -334,8 +353,11 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         UserRewardState storage userState = rewardStates[reward].userStates[user];
 
         uint256 currentRewardPerToken = _getNewRewardPerToken(reward);
+        uint256 userScaledBalance = userScaledBalances[user];
 
-        return (userScaledBalances[user] * (currentRewardPerToken - userState.lastRewardPerToken)) / UNIT;
+        if(userScaledBalance == 0) return 0;
+
+        return (userScaledBalance * (currentRewardPerToken - userState.lastRewardPerToken)) / UNIT;
     }
 
     function _updateRewardState(address reward) internal {
@@ -350,8 +372,8 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
 
         UserRewardState storage userState = rewardStates[reward].userStates[user];
 
-        userState.lastRewardPerToken = rewardStates[reward].rewardPerToken;
         userState.accruedRewards += _getUserEarnedRewards(reward, user);
+        userState.lastRewardPerToken = rewardStates[reward].rewardPerToken;
     }
 
     function _updateAllRewardStates() internal {
