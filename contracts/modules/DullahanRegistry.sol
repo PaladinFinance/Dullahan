@@ -85,11 +85,16 @@ contract DullahanRegistry is Owner {
         uint256 length = _managers.length;
         for(uint256 i; i < length;){
             if(_managers[i] == manager) revert Errors.AlreadyListedManager();
+            unchecked { ++i; }
         }
 
         dullahanPodManagers.push(manager);
 
         emit AddPodManager(manager);
+    }
+
+    function getPodManagers() external view returns(address[] memory) {
+        return dullahanPodManagers;
     }
 
 }

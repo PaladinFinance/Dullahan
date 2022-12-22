@@ -23,14 +23,25 @@ contract OracleModule is IOracleModule {
 
     // Constants
     uint256 public constant UNIT = 1e18;
-
-    address public constant AAVE_ORACLE = 0x000000000000000000000000000000000000dEaD;
-    address public constant GHO = 0x000000000000000000000000000000000000dEaD;
     
     uint256 public constant GHO_DECIMALS = 18;
 
+    address public immutable AAVE_ORACLE;
+    address public immutable GHO;
+
+
+    constructor(
+        address _oracle,
+        address _gho
+    ) {
+        if(_oracle == address(0) || _gho == address(0)) revert Errors.AddressZero();
+        AAVE_ORACLE = _oracle;
+        GHO = _gho;
+    }
+
 
     // Functions
+
     function getCollateralAmount(address collateral, uint256 feeAmount) external view returns(uint256) {
         uint256 collateralDecimals = IERC20Metadata(collateral).decimals();
 

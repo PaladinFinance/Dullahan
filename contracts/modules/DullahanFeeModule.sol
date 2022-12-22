@@ -11,13 +11,14 @@ pragma solidity 0.8.16;
 
 import "../interfaces/IDullahanVault.sol";
 import "../interfaces/IFeeModule.sol";
+import "../utils/Owner.sol";
 import {Errors} from "../utils/Errors.sol";
 
 /** @title Dullahan Fee Module
  *  @author Paladin
  *  @notice Module handling the calculation of fee rate for renting stkaave from the Dullahan Vault
  */
-contract DullahanFeeModule is IFeeModule {
+contract DullahanFeeModule is IFeeModule, Owner {
 
     // Constants
     uint256 public constant UNIT = 1e18;
@@ -33,6 +34,11 @@ contract DullahanFeeModule is IFeeModule {
     address public immutable vault;
 
     uint256 public feePerStkAavePerSecond;
+
+
+    // Events
+
+    event UpdatedFeePerStkAavePerSecond(uint256 oldFee, uint256 newFee);
 
 
     // Constructor
@@ -56,6 +62,8 @@ contract DullahanFeeModule is IFeeModule {
         uint256 vaultTotalAssets = _vault.totalAssets();
         uint256 currentlyRented = _vault.totalRentedAmount();
 
+        if(vaultTotalAssets == 0) return 0;
+
         return (currentlyRented * UNIT) / vaultTotalAssets;
     }
 
@@ -72,6 +80,13 @@ contract DullahanFeeModule is IFeeModule {
 
     // Admin Functions
 
-    // change feePerStkAavePerSecond
+    function updateFeePerStkAavePerSecond(uint256 newFee) external onlyOwner {
+        if(newFee == 0) revert Errors.NullAmount();
+
+        uint256 oldFee = feePerStkAavePerSecond;
+        feePerStkAavePerSecond = newFee;
+
+        emit UpdatedFeePerStkAavePerSecond(oldFee, newFee);
+    }
 
 }
