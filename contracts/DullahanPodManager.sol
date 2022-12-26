@@ -251,7 +251,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     }
 
     function freeStkAave(address pod) external nonReentrant returns(bool) {
-        if(!_updatePodState(address(this))) revert Errors.FailPodStateUpdate();
+        if(!_updatePodState(pod)) revert Errors.FailPodStateUpdate();
         if(pods[pod].podAddress == address(0)) revert Errors.PodInvalid();
         
         DullahanPod(pod).compoundStkAave();
@@ -261,6 +261,8 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
         if(currentStkAaveBalance > neededStkAaveAmount) {
             uint256 pullAmount = currentStkAaveBalance - neededStkAaveAmount;
+
+            pods[pod].rentedAmount -= pullAmount;
 
             DullahanVault(vault).pullRentedStkAave(pod, pullAmount);
 
@@ -284,6 +286,8 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         DullahanPod(pod).compoundStkAave();
         uint256 currentStkAaveBalance = IERC20(DullahanRegistry(registry).STK_AAVE()).balanceOf(pod);
         if(currentStkAaveBalance > 0) {
+            pods[pod].rentedAmount -= currentStkAaveBalance;
+
             DullahanVault(vault).pullRentedStkAave(pod, currentStkAaveBalance);
 
             emit FreedStkAave(pod, currentStkAaveBalance);
@@ -396,10 +400,15 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
         uint256 rentAmount = neededStkAaveAmount > currentStkAaveBalance ? neededStkAaveAmount - currentStkAaveBalance : 0;
 
+        // Check with the Vault if there is enough to rent, otherwise take all available
+        DullahanVault _vault = DullahanVault(vault);
+        uint256 availableStkAaveAmount = _vault.totalAvailable();
+        if(rentAmount > availableStkAaveAmount) rentAmount = availableStkAaveAmount;
+
         if(rentAmount > 0) {
             pods[pod].rentedAmount += rentAmount;
 
-            DullahanVault(vault).rentStkAave(pod, rentAmount);
+            _vault.rentStkAave(pod, rentAmount);
 
             emit RentedStkAave(pod, rentAmount);
         }

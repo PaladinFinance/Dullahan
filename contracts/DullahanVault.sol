@@ -180,6 +180,13 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         return totalAssets();
     }
 
+    function totalAvailable() public view returns (uint256) {
+        uint256 availableBalance = IERC20(STK_AAVE).balanceOf(address(this));
+        availableBalance = reserveAmount >= availableBalance ? 0 : availableBalance - reserveAmount;
+        uint256 bufferAmount = (totalAssets() * bufferRatio) / MAX_BPS;
+        return availableBalance > bufferAmount ? availableBalance - bufferAmount : 0;
+    }
+
     function convertToShares(uint256 assets) public pure returns (uint256) {
         return assets;
     }
