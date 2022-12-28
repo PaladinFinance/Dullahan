@@ -13,6 +13,7 @@ library Errors {
     error EmptyParameters();
     error NotInitialized();
     error AlreadyInitialized();
+    error CannotInitialize();
     error InvalidParameter();
     error CannotRecoverToken();
     error NullWithdraw();

@@ -11,6 +11,8 @@ contract MockMarket {
     address public gho;
     address public debtGho;
 
+    mapping(address => address) public aTokens;
+
     mapping(address => mapping(address => uint256)) public deposits;
     mapping(address => uint256) public debt;
 
@@ -25,14 +27,20 @@ contract MockMarket {
     function supply(address asset, uint256 amount, address onBehalfOf, uint16 referralCode) external {
         referralCode;
 
+        address aToken = aTokens[asset];
+
         IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
 
         deposits[asset][onBehalfOf] += amount;
+        MockERC20(aToken).mint(onBehalfOf, amount);
     }
 
     function withdraw(address asset, uint256 amount, address to) external {
 
+        address aToken = aTokens[asset];
+
         deposits[asset][msg.sender] -= amount;
+        MockERC20(aToken).burn(msg.sender, amount);
 
         IERC20(asset).safeTransfer(to, amount);
     }
@@ -59,11 +67,15 @@ contract MockMarket {
     // fake supply APY
     function increaseUserDeposit(address asset, address user, uint256 amount) external {
         deposits[asset][user] += amount;
+        address aToken = aTokens[asset];
+        MockERC20(aToken).mint(user, amount);
+        MockERC20(asset).mint(address(this), amount);
     }
 
     // fake borrow APY - debt increase
     function increaseUserDebt(address user, uint256 amount) external {
         debt[user] += amount;
+        MockERC20(debtGho).mint(user, amount);
     }
 
     function liquidateUser(address user, uint256 amount, address collateral, uint256 collateralAmount) external {
@@ -76,6 +88,10 @@ contract MockMarket {
 
         MockERC20(gho).burn(liquidator, amount);
         MockERC20(debtGho).burn(user, amount);
+    }
+
+    function addToken(address collateral, address aToken) external {
+        aTokens[collateral] = aToken;
     }
 
 }

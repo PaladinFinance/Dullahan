@@ -94,6 +94,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     event LiquidatedPod(address indexed pod, address indexed collateral, uint256 collateralAmount, uint256 receivedFeeAmount);
 
     event PaidFees(address indexed pod, uint256 feeAmount);
+    event MintingFees(address indexed pod, uint256 feeAmount);
 
     event ReserveProcessed(uint256 stakingRewardsAmount);
 
@@ -435,6 +436,14 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         reserveAmount += feeAmount;
 
         emit PaidFees(_pod, feeAmount);
+    }
+
+    function notifyMintingFee(uint256 feeAmount) external nonReentrant isValidPod {
+        address _pod = msg.sender;
+
+        reserveAmount += feeAmount;
+
+        emit MintingFees(_pod, feeAmount);
     }
 
 

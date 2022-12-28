@@ -22,5 +22,6 @@ interface IDullahanPodManager {
 
     function notifyStkAaveClaim(uint256 claimedAmount) external;
     function notifyPayFee(uint256 feeAmount) external;
+    function notifyMintingFee(uint256 feeAmount) external;
 
 }
