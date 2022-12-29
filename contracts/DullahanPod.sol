@@ -314,6 +314,7 @@ contract DullahanPod is ReentrancyGuard {
     function liquidateCollateral(uint256 amount, address receiver) external nonReentrant isInitialized onlyManager {
         if(amount == 0) return;
 
+        // Using MAX_UINT256 here will withdraw everything
         IAavePool(DullahanRegistry(registry).AAVE_POOL_V3()).withdraw(collateral, amount, address(this));
 
         if(amount == type(uint256).max) {

@@ -141,4 +141,8 @@ contract MockManager {
         reserveAmount += feeAmount;
     }
 
+    function liquidatePod(address pod, uint256 liquidationAmount, address receiver) external {
+        DullahanPod(pod).liquidateCollateral(liquidationAmount, receiver);
+    }
+
 }
