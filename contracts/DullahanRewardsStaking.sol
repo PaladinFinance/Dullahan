@@ -44,6 +44,8 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
 
     uint256 private constant UPDATE_REWARD_RATIO = 8500; // 85 %
 
+    uint256 private constant SEED_DEPOSIT = 0.001 ether;
+
 
     // Structs
 
@@ -83,6 +85,7 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
 
 
     // Storage
+    bool public initialized;
 
     address public immutable vault;
 
@@ -101,6 +104,8 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
 
 
     // Events
+
+    event Initialized();
 
     event Staked(address indexed caller, address indexed receiver, uint256 amount, uint256 scaledAmount);
     event Unstaked(address indexed owner, address indexed receiver, uint256 amount, uint256 scaledAmount);
@@ -126,6 +131,11 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         _;
     }
 
+    modifier isInitialized() {
+        if (!initialized) revert Errors.NotInitialized();
+        _;
+    }
+
 
     // Constructor
 
@@ -135,6 +145,17 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         if(_vault == address(0)) revert Errors.AddressZero();
 
         vault = _vault;
+    }
+
+    function init() external onlyOwner {
+        if(initialized) revert Errors.AlreadyInitialized();
+
+        initialized = true;
+
+        // Seed deposit to prevent 1 wei LP token exploit
+        _stake(msg.sender, SEED_DEPOSIT, msg.sender);
+
+        emit Initialized();
     }
 
 
@@ -190,30 +211,34 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
     // State-changing functions
 
     // Can give MAX_UINT256 to stake full balance
-    function stake(uint256 amount, address receiver) external nonReentrant whenNotPaused returns(uint256) {
+    function stake(uint256 amount, address receiver) external nonReentrant isInitialized whenNotPaused returns(uint256) {
         if(amount == 0) revert Errors.NullAmount();
         if(receiver == address(0)) revert Errors.AddressZero();
 
+        return _stake(msg.sender, amount, receiver);
+    }
+
+    function _stake(address caller, uint256 amount, address receiver) internal returns(uint256) {
         // We just want to update the reward states for the user who's balance gonna change
         _updateAllUserRewardStates(receiver);
 
-        if(amount == MAX_UINT256) amount = IERC20(vault).balanceOf(msg.sender);
+        if(amount == MAX_UINT256) amount = IERC20(vault).balanceOf(caller);
 
         uint256 scaledAmount = amount.rayDiv(_getCurrentIndex());
         if(scaledAmount == 0) revert Errors.NullScaledAmount();
 
-        IERC20(vault).safeTransferFrom(msg.sender, address(this), amount);
+        IERC20(vault).safeTransferFrom(caller, address(this), amount);
 
         userScaledBalances[receiver] += scaledAmount;
         totalScaledAmount += scaledAmount;
 
-        emit Staked(msg.sender, receiver, amount, scaledAmount);
+        emit Staked(caller, receiver, amount, scaledAmount);
 
         return scaledAmount;
     }
 
     // Can give MAX_UINT256 to unstake full balance
-    function unstake(uint256 scaledAmount, address receiver) external nonReentrant returns(uint256) {
+    function unstake(uint256 scaledAmount, address receiver) external nonReentrant isInitialized returns(uint256) {
         if(scaledAmount == 0) revert Errors.NullScaledAmount();
         if(receiver == address(0)) revert Errors.AddressZero();
 
@@ -235,38 +260,38 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         return amount;
     }
 
-    function claimRewards(address reward, address receiver) external nonReentrant returns(uint256) {
+    function claimRewards(address reward, address receiver) external nonReentrant isInitialized whenNotPaused returns(uint256) {
         if(receiver == address(0)) revert Errors.AddressZero();
 
         return _claimRewards(reward, msg.sender, receiver);
     }
 
-    function claimRewardsForUser(address reward, address user, address receiver) external nonReentrant returns(uint256) {
+    function claimRewardsForUser(address reward, address user, address receiver) external nonReentrant isInitialized whenNotPaused returns(uint256) {
         if(receiver == address(0) || user == address(0)) revert Errors.AddressZero();
         if(msg.sender != allowedClaimer[user]) revert Errors.ClaimNotAllowed();
 
         return _claimRewards(reward, user, receiver);
     }
 
-    function claimAllRewards(address receiver) external nonReentrant returns(UserClaimedRewards[] memory) {
+    function claimAllRewards(address receiver) external nonReentrant isInitialized whenNotPaused returns(UserClaimedRewards[] memory) {
         if(receiver == address(0)) revert Errors.AddressZero();
 
         return _claimAllRewards(msg.sender, receiver);
     }
 
-    function claimAllRewardsForUser(address user, address receiver) external nonReentrant returns(UserClaimedRewards[] memory) {
+    function claimAllRewardsForUser(address user, address receiver) external nonReentrant isInitialized whenNotPaused returns(UserClaimedRewards[] memory) {
         if(receiver == address(0) || user == address(0)) revert Errors.AddressZero();
         if(msg.sender != allowedClaimer[user]) revert Errors.ClaimNotAllowed();
 
         return _claimAllRewards(user, receiver);
     }
 
-    function updateRewardState(address reward) external {
+    function updateRewardState(address reward) external isInitialized whenNotPaused {
         if(reward == address(0)) revert Errors.AddressZero();
         _updateRewardState(reward);
     }
 
-    function updateAllRewardState() external {
+    function updateAllRewardState() external isInitialized whenNotPaused {
         _updateAllRewardStates();
     }
 
@@ -276,6 +301,7 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
     function queueRewards(address rewardToken, uint256 amount) 
         external
         nonReentrant
+        isInitialized
         whenNotPaused
         onlyRewardDepositors
         returns(bool) 

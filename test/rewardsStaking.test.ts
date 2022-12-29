@@ -87,6 +87,7 @@ describe('DullahanRewardsStaking contract tests', () => {
         )) as DullahanRewardsStaking;
         await staking.deployed();
 
+        await token.connect(admin).mint(ethers.utils.parseEther('10'), admin.address)
         await token.connect(admin).mint(depositor1_amount, depositor1.address)
         await token.connect(admin).mint(depositor2_amount, depositor2.address)
         await token.connect(admin).mint(depositor3_amount, depositor3.address)
@@ -96,6 +97,8 @@ describe('DullahanRewardsStaking contract tests', () => {
     it(' should be deployed & have correct parameters', async () => {
         expect(staking.address).to.properAddress
 
+        expect(await staking.initialized()).to.be.false
+
         expect(await staking.owner()).to.be.eq(admin.address)
 
         expect(await staking.vault()).to.be.eq(token.address)
@@ -104,6 +107,118 @@ describe('DullahanRewardsStaking contract tests', () => {
         expect(await staking.totalAssets()).to.be.eq(0)
 
         expect(await staking.getRewardList()).to.be.empty
+
+    });
+
+    describe('init', async () => {
+
+        const seed_deposit = ethers.utils.parseEther('0.001')
+
+        beforeEach(async () => {
+
+            await token.connect(admin).approve(staking.address, seed_deposit)
+
+        });
+
+        it(' should initialize the contract and make the inital deposit (& emit the correct Event)', async () => {
+
+            const init_tx = await staking.connect(admin).init()
+
+            expect(await staking.initialized()).to.be.true
+
+            expect(await staking.totalScaledAmount()).to.be.eq(seed_deposit)
+            expect(await token.balanceOf(staking.address)).to.be.eq(seed_deposit)
+            expect(await staking.userScaledBalances(admin.address)).to.be.eq(seed_deposit)
+
+            await expect(init_tx).to.emit(staking, 'Initialized')
+
+        });
+
+        it(' should stake correctly & update the state (& emit correct Event)', async () => {
+
+            const old_user_balance = await token.balanceOf(admin.address)
+            const old_staking_balance = await token.balanceOf(staking.address)
+
+            const old_user_scaled_balance = await staking.userScaledBalances(admin.address)
+            const old_total_scaled_supply = await staking.totalScaledAmount()
+
+            const old_user_staked_amount = await staking.userCurrentStakedAmount(admin.address)
+
+            const init_tx = await staking.connect(admin).init()
+
+            const new_user_balance = await token.balanceOf(admin.address)
+            const new_staking_balance = await token.balanceOf(staking.address)
+
+            const expected_index = RAY; // because initial staking
+
+            const expected_scaled_amount = seed_deposit.mul(RAY).add(expected_index.div(2)).div(expected_index)
+
+            const new_user_scaled_balance = await staking.userScaledBalances(admin.address)
+            const new_total_scaled_supply = await staking.totalScaledAmount()
+
+            const new_user_staked_amount = await staking.userCurrentStakedAmount(admin.address)
+
+            expect(new_user_balance).to.be.eq(old_user_balance.sub(seed_deposit))
+            expect(new_staking_balance).to.be.eq(old_staking_balance.add(seed_deposit))
+
+            expect(new_user_scaled_balance).to.be.eq(old_user_scaled_balance.add(expected_scaled_amount))
+            expect(new_total_scaled_supply).to.be.eq(old_total_scaled_supply.add(expected_scaled_amount))
+
+            expect(new_user_staked_amount).to.be.eq(old_user_staked_amount.add(seed_deposit))
+
+            await expect(init_tx).to.emit(staking, "Staked")
+            .withArgs(admin.address, admin.address, seed_deposit, expected_scaled_amount);
+
+            await expect(init_tx).to.emit(token, "Transfer")
+            .withArgs(admin.address, staking.address, seed_deposit);
+
+        });
+
+        it(' should only be able to initialize once', async () => {
+
+            await staking.connect(admin).init()
+
+            await expect(
+                staking.connect(admin).init()
+            ).to.be.revertedWith('AlreadyInitialized')
+
+        });
+
+        it(' should only be callable by admin', async () => {
+
+            await expect(
+                staking.connect(depositor1).init()
+            ).to.be.revertedWith('Ownable: caller is not the owner')
+
+        });
+
+        it(' should block all methods when contract is not initialized', async () => {
+
+            await expect(
+                staking.connect(depositor1).stake(ethers.utils.parseEther('5'), depositor1.address)
+            ).to.be.revertedWith('NotInitialized')
+
+            await expect(
+                staking.connect(depositor1).unstake(ethers.utils.parseEther('5'), depositor1.address)
+            ).to.be.revertedWith('NotInitialized')
+
+            await expect(
+                staking.connect(depositor1).updateRewardState(rewardToken1.address)
+            ).to.be.revertedWith('NotInitialized')
+
+            await expect(
+                staking.connect(depositor1).updateAllRewardState()
+            ).to.be.revertedWith('NotInitialized')
+
+            await expect(
+                staking.connect(depositor1).claimRewards(rewardToken1.address, depositor1.address)
+            ).to.be.revertedWith('NotInitialized')
+
+            await expect(
+                staking.connect(depositor1).claimAllRewards(depositor1.address)
+            ).to.be.revertedWith('NotInitialized')
+
+        });
 
     });
 
@@ -265,6 +380,9 @@ describe('DullahanRewardsStaking contract tests', () => {
         const total_amount = ethers.utils.parseEther('1500')
 
         beforeEach(async () => {
+
+            await token.connect(admin).approve(staking.address, ethers.constants.MaxUint256)
+            await staking.connect(admin).init()
 
             await staking.connect(admin).addRewardDepositor(rewardManager.address)
             await staking.connect(admin).addRewardDepositor(rewardManager2.address)
@@ -509,6 +627,9 @@ describe('DullahanRewardsStaking contract tests', () => {
 
         beforeEach(async () => {
 
+            await token.connect(admin).approve(staking.address, ethers.constants.MaxUint256)
+            await staking.connect(admin).init()
+
             await token.connect(depositor1).approve(staking.address, ethers.constants.MaxUint256)
             await token.connect(depositor2).approve(staking.address, depositor2_amount)
 
@@ -522,6 +643,8 @@ describe('DullahanRewardsStaking contract tests', () => {
             const old_user_scaled_balance = await staking.userScaledBalances(depositor1.address)
             const old_total_scaled_supply = await staking.totalScaledAmount()
 
+            const old_total_assets = await staking.totalAssets()
+
             const old_user_staked_amount = await staking.userCurrentStakedAmount(depositor1.address)
 
             const stake_tx = await staking.connect(depositor1).stake(depositor1_amount, depositor1.address)
@@ -529,7 +652,7 @@ describe('DullahanRewardsStaking contract tests', () => {
             const new_user_balance = await token.balanceOf(depositor1.address)
             const new_staking_balance = await token.balanceOf(staking.address)
 
-            const expected_index = RAY;
+            const expected_index = old_total_assets.mul(RAY).add(old_total_scaled_supply.div(2)).div(old_total_scaled_supply)
 
             const expected_scaled_amount = depositor1_amount.mul(RAY).add(expected_index.div(2)).div(expected_index)
 
@@ -565,6 +688,8 @@ describe('DullahanRewardsStaking contract tests', () => {
 
             const old_reward_state = await staking.rewardStates(rewardToken1.address)
 
+            const old_total_scaled_amount = await staking.totalScaledAmount();
+
             const stake_tx = await staking.connect(depositor1).stake(depositor1_amount, depositor1.address)
 
             const tx_ts = BigNumber.from((await provider.getBlock((await stake_tx).blockNumber || 0)).timestamp)
@@ -572,7 +697,9 @@ describe('DullahanRewardsStaking contract tests', () => {
             const new_reward_state = await staking.rewardStates(rewardToken1.address)
             const new_user_reward_state = await staking.getUserRewardState(rewardToken1.address, depositor1.address)
 
-            const expected_reward_per_token = old_reward_state.rewardPerToken // because no deposit yet
+            const expected_reward_per_token = old_reward_state.rewardPerToken.add(
+                (tx_ts.sub(old_reward_state.lastUpdate)).mul(old_reward_state.ratePerSecond).mul(UNIT).div(old_total_scaled_amount)
+            )
 
             expect(new_reward_state.rewardPerToken).to.be.eq(expected_reward_per_token)
             expect(new_reward_state.lastUpdate).to.be.eq(tx_ts)
@@ -733,6 +860,8 @@ describe('DullahanRewardsStaking contract tests', () => {
 
             const old_reward_state = await staking.rewardStates(rewardToken1.address)
 
+            const old_total_scaled_amount = await staking.totalScaledAmount();
+
             const stake_tx = await staking.connect(depositor1).stake(first_deposit, depositor1.address)
 
             const tx_ts = BigNumber.from((await provider.getBlock((await stake_tx).blockNumber || 0)).timestamp)
@@ -742,7 +871,9 @@ describe('DullahanRewardsStaking contract tests', () => {
 
             const new_total_scaled_amount = await staking.totalScaledAmount();
 
-            const expected_reward_per_token = old_reward_state.rewardPerToken // because no deposit yet
+            const expected_reward_per_token = old_reward_state.rewardPerToken.add(
+                (tx_ts.sub(old_reward_state.lastUpdate)).mul(old_reward_state.ratePerSecond).mul(UNIT).div(old_total_scaled_amount)
+            )
 
             expect(new_reward_state.rewardPerToken).to.be.eq(expected_reward_per_token)
             expect(new_reward_state.lastUpdate).to.be.eq(tx_ts)
@@ -785,6 +916,8 @@ describe('DullahanRewardsStaking contract tests', () => {
             const old_depositor_scaled_balance = await staking.userScaledBalances(depositor1.address)
             const old_total_scaled_supply = await staking.totalScaledAmount()
 
+            const old_total_assets = await staking.totalAssets()
+
             const old_user_staked_amount = await staking.userCurrentStakedAmount(depositor3.address)
 
             const stake_tx = await staking.connect(depositor1).stake(depositor1_amount, depositor3.address)
@@ -793,7 +926,7 @@ describe('DullahanRewardsStaking contract tests', () => {
             const new_receiver_balance = await token.balanceOf(depositor3.address)
             const new_staking_balance = await token.balanceOf(staking.address)
 
-            const expected_index = RAY;
+            const expected_index = old_total_assets.mul(RAY).add(old_total_scaled_supply.div(2)).div(old_total_scaled_supply)
 
             const expected_scaled_amount = depositor1_amount.mul(RAY).add(expected_index.div(2)).div(expected_index)
 
@@ -845,6 +978,9 @@ describe('DullahanRewardsStaking contract tests', () => {
         const depositor2_withdraw_scaled = ethers.utils.parseEther('450')
 
         beforeEach(async () => {
+
+            await token.connect(admin).approve(staking.address, ethers.constants.MaxUint256)
+            await staking.connect(admin).init()
 
             await token.connect(depositor1).approve(staking.address, ethers.constants.MaxUint256)
             await token.connect(depositor2).approve(staking.address, depositor2_amount)
@@ -1061,6 +1197,9 @@ describe('DullahanRewardsStaking contract tests', () => {
 
         beforeEach(async () => {
 
+            await token.connect(admin).approve(staking.address, ethers.constants.MaxUint256)
+            await staking.connect(admin).init()
+
             const total_amount = ethers.utils.parseEther('1500')
             const total_amount2 = ethers.utils.parseEther('94500')
 
@@ -1120,6 +1259,9 @@ describe('DullahanRewardsStaking contract tests', () => {
 
         beforeEach(async () => {
 
+            await token.connect(admin).approve(staking.address, ethers.constants.MaxUint256)
+            await staking.connect(admin).init()
+
             const total_amount = ethers.utils.parseEther('1500')
             const total_amount2 = ethers.utils.parseEther('94500')
 
@@ -1174,6 +1316,9 @@ describe('DullahanRewardsStaking contract tests', () => {
     describe('claimRewards & claimRewardsForUser', async () => {
 
         beforeEach(async () => {
+
+            await token.connect(admin).approve(staking.address, ethers.constants.MaxUint256)
+            await staking.connect(admin).init()
 
             const total_amount = ethers.utils.parseEther('1500')
 
@@ -1411,6 +1556,9 @@ describe('DullahanRewardsStaking contract tests', () => {
     describe('claimAllRewards & claimAllRewardsForUser', async () => {
 
         beforeEach(async () => {
+
+            await token.connect(admin).approve(staking.address, ethers.constants.MaxUint256)
+            await staking.connect(admin).init()
 
             const total_amount = ethers.utils.parseEther('1500')
             const total_amount2 = ethers.utils.parseEther('950')
