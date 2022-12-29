@@ -50,6 +50,9 @@ contract DullahanPod is ReentrancyGuard {
     address public collateral;
     address public aToken;
 
+    address public aave;
+    address public stkAave;
+
 
     // Events
 
@@ -137,6 +140,8 @@ contract DullahanPod is ReentrancyGuard {
         aToken = _aToken;
 
         address _stkAave = DullahanRegistry(_registry).STK_AAVE();
+        stkAave = _stkAave;
+        aave = DullahanRegistry(registry).AAVE();
 
         IERC20(_stkAave).safeIncreaseAllowance(_vault, type(uint256).max);
 
@@ -333,7 +338,7 @@ contract DullahanPod is ReentrancyGuard {
         address oldDelegate = delegate;
         delegate = newDelegate;
 
-        IGovernancePowerDelegationToken(DullahanRegistry(registry).STK_AAVE()).delegate(newDelegate);
+        IGovernancePowerDelegationToken(stkAave).delegate(newDelegate);
 
         emit UpdatedDelegate(oldDelegate, newDelegate);
     }
@@ -352,7 +357,7 @@ contract DullahanPod is ReentrancyGuard {
     // Internal functions
 
     function _getStkAaveRewards() internal {
-        IStakedAave _stkAave = IStakedAave(DullahanRegistry(registry).STK_AAVE());
+        IStakedAave _stkAave = IStakedAave(stkAave);
 
         //Get pending rewards amount
         uint256 pendingRewards = _stkAave.getTotalRewardsBalance(address(this));
@@ -362,7 +367,7 @@ contract DullahanPod is ReentrancyGuard {
             _stkAave.claimRewards(address(this), pendingRewards);
         }
 
-        IERC20 _aave = IERC20(DullahanRegistry(registry).AAVE());
+        IERC20 _aave = IERC20(aave);
         uint256 currentBalance = _aave.balanceOf(address(this));
         
         if(currentBalance > 0) {

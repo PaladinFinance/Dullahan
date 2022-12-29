@@ -287,6 +287,8 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             expect(await pod.aToken()).to.be.eq(aCollat.address)
             expect(await pod.podOwner()).to.be.eq(podOwner.address)
             expect(await pod.delegate()).to.be.eq(delegate.address)
+            expect(await pod.aave()).to.be.eq(aave.address)
+            expect(await pod.stkAave()).to.be.eq(stkAave.address)
 
             await expect(init_tx).to.emit(pod, "PodInitialized")
             .withArgs(
