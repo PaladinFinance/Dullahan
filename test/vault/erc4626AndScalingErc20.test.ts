@@ -32,7 +32,6 @@ const { provider } = ethers;
 
 let vaultFactory: ContractFactory
 
-const UNIT = ethers.utils.parseEther('1')
 const MAX_BPS = BigNumber.from('10000')
 const MAX_UINT256 = ethers.constants.MaxUint256
 const WEEK = BigNumber.from(7 * 86400);

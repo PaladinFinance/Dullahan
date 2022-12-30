@@ -75,4 +75,8 @@ library Errors {
     // Registry Errors
     error VaultAlreadySet();
 
+    // Zap Errors
+    error InvalidSourceToken();
+    error DepositFailed();
+
 }
