@@ -64,6 +64,7 @@ contract DullahanFeeModule is IFeeModule, Owner {
 
         if(vaultTotalAssets == 0) return 0;
 
+        // Utilization Rate = Current Rented amount / Total Vault Assets
         return (currentlyRented * UNIT) / vaultTotalAssets;
     }
 
@@ -71,6 +72,8 @@ contract DullahanFeeModule is IFeeModule, Owner {
         uint256 utilRate = utilizationRate();
         currentFee = feePerStkAavePerSecond;
 
+        // If the Utilization Rate is over the Threshold, increase the fee per second
+        // using the calculated multiplier
         if(utilRate >= TRESHOLD) {
             uint256 multiplier = BASE_MULTIPLIER + (EXTRA_MULTIPLIER_STEP * (utilRate - TRESHOLD));
             currentFee = (currentFee * multiplier) / UNIT;

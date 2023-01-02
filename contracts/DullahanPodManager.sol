@@ -200,7 +200,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         if(collateralAmount > podCollateralBalance) {
             collateralAmount = podCollateralBalance;
 
-            // to do here : calculate the reduced amount of fees to be received based on real collateral amount we can get
+            // Calculate the reduced amount of fees to be received based on real collateral amount we can get
             feeAmount = IOracleModule(oracleModule).getFeeAmount(
                 _pod.collateral,
                 (collateralAmount * (MAX_BPS - extraLiquidationRatio)) / MAX_BPS
@@ -223,7 +223,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         // Clone to create new Pod
         address newPod = Clones.clone(podImplementation);
 
-        // Init Pod
+        // Initialize the newly created Pod
         DullahanPod(newPod).init(
             address(this),
             vault,
@@ -234,7 +234,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
             DullahanVault(vault).getDelegate()
         );
 
-        // Write new Pod data in storage
+        // Write the new Pod data in storage
         pods[newPod].podAddress = newPod;
         pods[newPod].podOwner = podOwner;
         pods[newPod].collateral = collateral;
@@ -255,16 +255,21 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         if(!_updatePodState(pod)) revert Errors.FailPodStateUpdate();
         if(pods[pod].podAddress == address(0)) revert Errors.PodInvalid();
         
+        // Make the Pod claim any pending stkAAVE rewards
         DullahanPod(pod).compoundStkAave();
 
+        // Calculate the amount of stkAave the Pod needs based on the amount of GHO debt it has
         uint256 neededStkAaveAmount = _calculatedNeededStkAave(pod, 0);
         uint256 currentStkAaveBalance = IERC20(DullahanRegistry(registry).STK_AAVE()).balanceOf(pod);
 
+        // If the Pod holds more stkAave than needed
         if(currentStkAaveBalance > neededStkAaveAmount) {
             uint256 pullAmount = currentStkAaveBalance - neededStkAaveAmount;
 
+            // Update the tracked rented amount
             pods[pod].rentedAmount -= pullAmount;
 
+            // And make the Vault pull the stkAave from the Pod
             DullahanVault(vault).pullRentedStkAave(pod, pullAmount);
 
             emit FreedStkAave(pod, pullAmount);
@@ -278,6 +283,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
         address liquidator = msg.sender;
 
+        // Update the Pod state to get the actual mount of fees owed
         _updatePodState(pod);
 
         // Check if Pod can be liquidated
@@ -287,8 +293,10 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         DullahanPod(pod).compoundStkAave();
         uint256 currentStkAaveBalance = IERC20(DullahanRegistry(registry).STK_AAVE()).balanceOf(pod);
         if(currentStkAaveBalance > 0) {
+            // Update the tracked rented amount
             pods[pod].rentedAmount -= currentStkAaveBalance;
 
+            // And make the Vault pull the stkAave from the Pod
             DullahanVault(vault).pullRentedStkAave(pod, currentStkAaveBalance);
 
             emit FreedStkAave(pod, currentStkAaveBalance);
@@ -311,20 +319,21 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         if(collateralAmount > podCollateralBalance) {
             collateralAmount = podCollateralBalance;
 
-            // to do here : calculate the reduced amount of fees to be received based on real collateral amount we can get
+            // Calculate the reduced amount of fees to be received based on real collateral amount we can get
             paidFees = IOracleModule(oracleModule).getFeeAmount(
                 _pod.collateral,
                 (collateralAmount * (MAX_BPS - extraLiquidationRatio)) / MAX_BPS
             );
         }
 
+        // Pull the GHO fees from the liquidator
         IERC20(DullahanRegistry(registry).GHO()).transferFrom(liquidator, address(this), paidFees);
 
         // Reset owed fees for the Pod & add fees to Reserve
         _pod.accruedFees = 0;
         reserveAmount += paidFees;
 
-        // Liquidate & send to swapper
+        // Liquidate & send to the liquidator
         DullahanPod(pod).liquidateCollateral(collateralAmount, liquidator);
 
         emit LiquidatedPod(pod, _pod.collateral, collateralAmount, paidFees);
@@ -374,13 +383,16 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         uint256 currentReserveAmount = reserveAmount;
         if(currentReserveAmount == 0) return true;
 
+        // Reset the Reserve
         reserveAmount = 0;
 
         address _ghoAddress = DullahanRegistry(registry).GHO();
         IERC20 _gho = IERC20(_ghoAddress);
+        // Take the DAO fees based on current amount to process
         uint256 protocolFees = (currentReserveAmount * protocolFeeRatio) / MAX_BPS;
         _gho.safeTransfer(protocolFeeChest, protocolFees);
 
+        // And send the rest of the fees to the Staking module to be queued for distribution
         uint256 stakingRewardsAmount = currentReserveAmount - protocolFees;
         IDullahanRewardsStaking(rewardsStaking).queueRewards(_ghoAddress, stakingRewardsAmount);
         _gho.safeTransfer(rewardsStaking, stakingRewardsAmount);
@@ -396,9 +408,12 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     function getStkAave(uint256 amountToMint) external nonReentrant whenNotPaused isValidPod returns(bool){
         address pod = msg.sender;
 
+        // Caculate the needed amount of stkaave based on current GHO debt + amount of GHO wanted for minting
+        // & Fetch the current Pod stkAave balance
         uint256 neededStkAaveAmount = _calculatedNeededStkAave(pod, amountToMint);
         uint256 currentStkAaveBalance = IERC20(DullahanRegistry(registry).STK_AAVE()).balanceOf(pod);
 
+        // Get the amount of stkAave to rent from the Vault
         uint256 rentAmount = neededStkAaveAmount > currentStkAaveBalance ? neededStkAaveAmount - currentStkAaveBalance : 0;
 
         // Check with the Vault if there is enough to rent, otherwise take all available
@@ -407,8 +422,10 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         if(rentAmount > availableStkAaveAmount) rentAmount = availableStkAaveAmount;
 
         if(rentAmount > 0) {
+            // Update the tracked rented amount for the Pod
             pods[pod].rentedAmount += rentAmount;
 
+            // And make the Vault send the stkAave to the Pod
             _vault.rentStkAave(pod, rentAmount);
 
             emit RentedStkAave(pod, rentAmount);
@@ -420,10 +437,13 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     function notifyStkAaveClaim(uint256 claimedAmount) external nonReentrant isValidPod {
         address _pod = msg.sender;
 
+        // Update the Pod state with the previous stkAave rented amount
         _updatePodState(_pod);
 
+        // Update the tracked rented amount for the Pod
         pods[_pod].rentedAmount += claimedAmount;
 
+        // And notify the Vault of the newly claimed amount
         DullahanVault(vault).notifyRentedAmount(_pod, claimedAmount);
 
         emit RentedStkAave(_pod, claimedAmount);
@@ -431,8 +451,10 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
     function notifyPayFee(uint256 feeAmount) external nonReentrant isValidPod {
         address _pod = msg.sender;
+        // Update the amount of fees woed by the Pod
         pods[_pod].accruedFees -= feeAmount;
 
+        // And set the received fees as Reserve
         reserveAmount += feeAmount;
 
         emit PaidFees(_pod, feeAmount);
@@ -441,6 +463,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     function notifyMintingFee(uint256 feeAmount) external nonReentrant isValidPod {
         address _pod = msg.sender;
 
+        // Set the received minting fees as Reserve
         reserveAmount += feeAmount;
 
         emit MintingFees(_pod, feeAmount);
@@ -457,6 +480,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     function _accruedIndex() internal view returns(uint256) {
         if(block.timestamp <= lastIndexUpdate) return 0;
 
+        // Time since the last index update
         uint256 elapsedTime = block.timestamp - lastIndexUpdate;
 
         // Fee (in GHO) per rented stkAave per second
@@ -465,8 +489,10 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     }
 
     function _updateGlobalState() internal returns(bool) {
+        // Get the new index
         uint256 accruedIndex = _accruedIndex();
 
+        // Update the storage
         lastIndexUpdate = block.timestamp;
         lastUpdatedIndex = lastUpdatedIndex + accruedIndex;
 
@@ -478,6 +504,8 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
         Pod storage _pod = pods[podAddress];
 
+        // Get the lastest index & the Pod last index
+        // to calculate the accrued owed fees based on the Pod's rented amount
         uint256 _lastUpdatedIndex = lastUpdatedIndex;
         uint256 _oldPodIndex = _pod.lastIndex;
         _pod.lastIndex = _lastUpdatedIndex;

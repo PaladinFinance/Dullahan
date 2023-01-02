@@ -47,9 +47,11 @@ contract OracleModule is IOracleModule {
 
         IAaveOracle _oracle = IAaveOracle(AAVE_ORACLE);
 
+        // Get the price for both assets
         uint256 collateralPrice = _oracle.getAssetPrice(collateral);
         uint256 feePrice = _oracle.getAssetPrice(GHO);
 
+        // Calculate & return the amount based on both prices & scaling it to the correct decimals for the given token
         if(collateralDecimals > GHO_DECIMALS) {
             return ((feeAmount * feePrice) * (10**(collateralDecimals - GHO_DECIMALS))) / collateralPrice;
         } else {
@@ -63,9 +65,11 @@ contract OracleModule is IOracleModule {
 
         IAaveOracle _oracle = IAaveOracle(AAVE_ORACLE);
 
+        // Get the price for both assets
         uint256 collateralPrice = _oracle.getAssetPrice(collateral);
         uint256 feePrice = _oracle.getAssetPrice(GHO);
 
+        // Calculate & return the amount based on both prices & scaling it from the decimals of the given token
         if(collateralDecimals > GHO_DECIMALS) {
             return ((collateralAmount * collateralPrice) / (10**(collateralDecimals - GHO_DECIMALS))) / feePrice;
         } else {

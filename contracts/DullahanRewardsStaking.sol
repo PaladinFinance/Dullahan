@@ -163,6 +163,8 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
 
     function lastRewardUpdateTimestamp(address reward) public view returns(uint256) {
         uint256 rewardEndTimestamp = rewardStates[reward].distributionEndTimestamp;
+        // If the distribution is already over, return the timestamp of the end of distribution
+        // to prevent from accruing rewards that do not exist
         return block.timestamp > rewardEndTimestamp ? rewardEndTimestamp : block.timestamp;
     }
 
@@ -197,8 +199,9 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
 
         // For each listed reward
         for(uint256 i; i < rewardsLength;){
+            // Add the reward token to the list
             rewardAmounts[i].reward = rewards[i];
-            // And add the calculated claimable amount of the given reward for the given vault
+            // And add the calculated claimable amount of the given reward
             rewardAmounts[i].claimableAmount = rewardStates[rewards[i]].userStates[user].accruedRewards + _getUserEarnedRewards(rewards[i], user);
 
             unchecked { ++i; }
@@ -222,13 +225,18 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         // We just want to update the reward states for the user who's balance gonna change
         _updateAllUserRewardStates(receiver);
 
+        // If given MAX_UINT256, we want to deposit the full user balance
         if(amount == MAX_UINT256) amount = IERC20(vault).balanceOf(caller);
 
+        // Calculate the scaled amount corresponding to the user deposit
+        // based on the total tokens held by this contract (because of the Scaling ERC20 logic)
         uint256 scaledAmount = amount.rayDiv(_getCurrentIndex());
         if(scaledAmount == 0) revert Errors.NullScaledAmount();
 
+        // Pull the tokens from the user
         IERC20(vault).safeTransferFrom(caller, address(this), amount);
 
+        // Update storage
         userScaledBalances[receiver] += scaledAmount;
         totalScaledAmount += scaledAmount;
 
@@ -245,14 +253,18 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         // We just want to update the reward states for the user who's balance gonna change
         _updateAllUserRewardStates(msg.sender);
 
+        // If given MAX_UINT256, we want to withdraw the full user balance
         if(scaledAmount == MAX_UINT256) scaledAmount = userScaledBalances[msg.sender];
 
+        // Calculate the amount to receive based on the given scaled amount
         uint256 amount = scaledAmount.rayMul(_getCurrentIndex());
         if(amount == 0) revert Errors.NullAmount();
 
+        // Update storage
         userScaledBalances[msg.sender] -= scaledAmount;
         totalScaledAmount -= scaledAmount;
 
+        // And send the tokens to the given receiver
         IERC20(vault).safeTransfer(receiver, amount);
 
         emit Unstaked(msg.sender, receiver, amount, scaledAmount);
@@ -311,14 +323,20 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
 
         RewardState storage state = rewardStates[rewardToken];
 
-        if(state.lastUpdate == 0) { // new reward token
+        // If the given reward token is new (no previous distribution),
+        // add it to the reward list
+        if(state.lastUpdate == 0) {
             rewardList.push(rewardToken);
         }
 
+        // Update the reward token state before queueing new rewards
         _updateRewardState(rewardToken);
 
+        // Get the total queued amount (previous queued amount + new amount)
         uint256 totalQueued = amount + state.queuedRewardAmount;
 
+        // If there is no current disitrbution (previous is over or new reward token):
+        // Start the new distribution directly without queueing the rewards
         if(block.timestamp >= state.distributionEndTimestamp){
             _updateRewardDistribution(rewardToken, state, totalQueued);
             state.queuedRewardAmount = 0;
@@ -326,6 +344,8 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
             return true;
         }
 
+        // Calculate the reamining duration for the current distribution
+        // and the ratio of queued rewards compared to total rewards (queued + reamining in current distribution)
         // state.distributionEndTimestamp - block.timestamp => remaining time in the current distribution
         uint256 currentRemainingAmount =  state.ratePerSecond * (state.distributionEndTimestamp - block.timestamp);
         uint256 queuedAmountRatio =  (totalQueued * MAX_BPS) / (totalQueued + currentRemainingAmount);
@@ -342,10 +362,14 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
     }
 
     function _updateRewardDistribution(address rewardToken, RewardState storage state, uint256 rewardAmount) internal {
+        // Calculate the remaining duration of the current distribution (if not already over)
+        // to calculate the amount fo rewards not yet distributed, and add them to the new amount to distribute
         if(block.timestamp < state.distributionEndTimestamp) {
             uint256 remainingRewards = state.ratePerSecond * (state.distributionEndTimestamp - block.timestamp);
             rewardAmount += remainingRewards;
         }
+        // Calculate the new rate per second
+        // & update the storage for the new distribution state
         state.ratePerSecond = rewardAmount / DISTRIBUTION_DURATION;
         state.currentRewardAmount = rewardAmount;
         state.lastUpdate = block.timestamp;
@@ -366,10 +390,14 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
     function _getNewRewardPerToken(address reward) internal view returns(uint256) {
         RewardState storage state = rewardStates[reward];
 
+        // If no fudns are deposited, we don't want to distribute rewards
         if(totalScaledAmount == 0) return state.rewardPerToken;
 
+        // Get the last update timestamp
         uint256 lastRewardTimetamp = lastRewardUpdateTimestamp(reward);
+        if(state.lastUpdate == lastRewardTimetamp) return state.rewardPerToken;
 
+        // Calculate the increase since the last update
         return state.rewardPerToken + (
             (((lastRewardTimetamp - state.lastUpdate) * state.ratePerSecond) * UNIT) / totalScaledAmount
         );
@@ -378,26 +406,32 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
     function _getUserEarnedRewards(address reward, address user) internal view returns(uint256) {
         UserRewardState storage userState = rewardStates[reward].userStates[user];
 
+        // Get the new rewardPerToken for the reward token, and the user scaled balance
         uint256 currentRewardPerToken = _getNewRewardPerToken(reward);
         uint256 userScaledBalance = userScaledBalances[user];
 
         if(userScaledBalance == 0) return 0;
 
+        // If the user has a previous deposit (scaled balance is not null), calcualte the
+        // earned rewards based on the increase of the rewardPerToken value
         return (userScaledBalance * (currentRewardPerToken - userState.lastRewardPerToken)) / UNIT;
     }
 
     function _updateRewardState(address reward) internal {
         RewardState storage state = rewardStates[reward];
 
+        // Update the storage with the new reward state 
         state.rewardPerToken = _getNewRewardPerToken(reward);
         state.lastUpdate = lastRewardUpdateTimestamp(reward);
     }
 
     function _updateUserRewardState(address reward, address user) internal {
+        // Update the reward token state before the user's state
         _updateRewardState(reward);
 
         UserRewardState storage userState = rewardStates[reward].userStates[user];
 
+        // Update the storage with the new reward state 
         userState.accruedRewards += _getUserEarnedRewards(reward, user);
         userState.lastRewardPerToken = rewardStates[reward].rewardPerToken;
     }
@@ -406,6 +440,7 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         address[] memory _rewards = rewardList;
         uint256 length = _rewards.length;
 
+        // For all reward token in the list, update the reward state
         for(uint256 i; i < length;){
             _updateRewardState(_rewards[i]);
 
@@ -417,6 +452,7 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         address[] memory _rewards = rewardList;
         uint256 length = _rewards.length;
 
+        // For all reward token in the list, update the user's reward state
         for(uint256 i; i < length;){
             _updateUserRewardState(_rewards[i], user);
 
@@ -437,12 +473,15 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
 
         UserRewardState storage userState = rewardStates[reward].userStates[user];
         
+        // Fetch the amount of rewards accrued by the user
         uint256 rewardAmount = userState.accruedRewards;
 
         if(rewardAmount == 0) return 0;
         
-        // If the user accrued rewards, send them to the user
+        // Reset user's accrued rewards
         userState.accruedRewards = 0;
+
+        // If the user accrued rewards, send them to the given receiver
         IERC20(reward).safeTransfer(receiver, rewardAmount);
 
         emit ClaimedRewards(reward, user, receiver, rewardAmount);
@@ -465,21 +504,24 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         // Update all user states to get all current claimable rewards
         _updateAllUserRewardStates(user);
 
+        // For each reward token in the reward list
         for(uint256 i; i < rewardsLength; ++i){
             UserRewardState storage userState = rewardStates[rewards[i]].userStates[user];
             
+            // Fetch the amount of rewards accrued by the user
             uint256 rewardAmount = userState.accruedRewards;
 
             // If the user accrued no rewards, skip
             if(rewardAmount == 0) continue;
 
-            
+            // Track the claimed amount for the reward token
             rewardAmounts[i].reward = rewards[i];
             rewardAmounts[i].amount = rewardAmount;
             
+            // Reset user's accrued rewards
             userState.accruedRewards = 0;
             
-            // For each reward token, send the accrued rewards to the user
+            // For each reward token, send the accrued rewards to the given receiver
             IERC20(rewards[i]).safeTransfer(receiver, rewardAmount);
 
             emit ClaimedRewards(rewards[i], user, receiver, rewardAmounts[i].amount);
@@ -508,6 +550,7 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
     function addRewardDepositor(address depositor) external onlyOwner {
         if(depositor == address(0)) revert Errors.AddressZero();
         if(rewardDepositors[depositor]) revert Errors.AlreadyListedDepositor();
+
         rewardDepositors[depositor] = true;
 
         emit AddedRewardDepositor(depositor);
@@ -516,6 +559,7 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
     function removeRewardDepositor(address depositor) external onlyOwner {
         if(depositor == address(0)) revert Errors.AddressZero();
         if(!rewardDepositors[depositor]) revert Errors.NotListedDepositor();
+
         rewardDepositors[depositor] = false;
 
         emit RemovedRewardDepositor(depositor);

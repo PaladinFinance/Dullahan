@@ -81,6 +81,7 @@ contract DullahanRegistry is Owner {
     function addPodManager(address manager) external onlyOwner {
         if(manager == address(0)) revert Errors.AddressZero();
 
+        // Check in the Manager list that it's not already present
         address[] memory _managers = dullahanPodManagers;
         uint256 length = _managers.length;
         for(uint256 i; i < length;){

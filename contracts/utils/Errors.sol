@@ -37,6 +37,7 @@ library Errors {
 
     // Maths Errors
     error NumberExceed128Bits();
+    error NumberExceed248Bits();
 
     // Vault Errors
     error ManagerAlreadyListed();

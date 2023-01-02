@@ -39,9 +39,10 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
 
 
     // Struct
-    struct PodsManager { // To pack better - gas opti
+    struct PodsManager {
         bool rentingAllowed;
-        uint128 totalRented; // Based on the AAVE max total supply, should be safe
+        // Based on the AAVE max total supply, should be safe
+        uint248 totalRented;
     }
 
 
@@ -152,6 +153,7 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
             msg.sender
         );
 
+        // Set the delegate, so any received token updates the delegate's voting power
         IGovernancePowerDelegationToken(STK_AAVE).delegate(_votingPowerManager);
 
         emit Initialized();
@@ -188,26 +190,38 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
     }
 
     function convertToShares(uint256 assets) public pure returns (uint256) {
+        // Because we use a ScalingERC20, shares of the user will grow over time to match the owed assets
+        // (assets & shares are always 1:1)
         return assets;
     }
 
     function convertToAssets(uint256 shares) public pure returns (uint256) {
+        // Because we use a ScalingERC20, shares of the user will grow over time to match the owed assets
+        // (assets & shares are always 1:1)
         return shares;
     }
 
     function previewDeposit(uint256 assets) public pure returns (uint256) {
+        // Because we use a ScalingERC20, shares of the user will grow over time to match the owed assets
+        // (assets & shares are always 1:1)
         return assets;
     }
 
     function previewMint(uint256 shares) public pure returns (uint256) {
+        // Because we use a ScalingERC20, shares of the user will grow over time to match the owed assets
+        // (assets & shares are always 1:1)
         return shares;
     }
 
     function previewWithdraw(uint256 assets) public pure returns (uint256) {
+        // Because we use a ScalingERC20, shares of the user will grow over time to match the owed assets
+        // (assets & shares are always 1:1)
         return assets;
     }
 
     function previewRedeem(uint256 shares) public pure returns (uint256) {
+        // Because we use a ScalingERC20, shares of the user will grow over time to match the owed assets
+        // (assets & shares are always 1:1)
         return shares;
     }
 
@@ -301,17 +315,23 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         if(pod == address(0)) revert Errors.AddressZero();
         if(amount == 0) revert Errors.NullAmount();
 
+        // Fetch Aave Safety Module rewards & stake them into stkAAVE
         _getStkAaveRewards();
 
         IERC20 _stkAave = IERC20(STK_AAVE);
 
+        // Check that the asked amount is available :
+        // - Vault has enough asset for the asked amount
+        // - Asked amount does not include the buffer allocated to withdraws
         uint256 availableBalance = _stkAave.balanceOf(address(this));
         availableBalance = reserveAmount >= availableBalance ? 0 : availableBalance - reserveAmount;
         uint256 bufferAmount = (totalAssets() * bufferRatio) / MAX_BPS;
         if(availableBalance < bufferAmount) revert Errors.WithdrawBuffer();
         if(amount > (availableBalance - bufferAmount)) revert Errors.NotEnoughAvailableFunds();
 
-        podManagers[manager].totalRented += safe128(amount);
+        // Track the amount rented for the manager that requested it
+        // & send the token to the Pod
+        podManagers[manager].totalRented += safe248(amount);
         totalRentedAmount += amount;
         _stkAave.safeTransfer(pod, amount);
     
@@ -325,9 +345,12 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         if(pod == address(0)) revert Errors.AddressZero();
         if(addedAmount == 0) revert Errors.NullAmount();
 
-        podManagers[manager].totalRented += safe128(addedAmount);
+        // Update the total amount rented & the amount rented for the specific
+        // maanger with the amount claimed from Aave's Safety Module via the Pod
+        podManagers[manager].totalRented += safe248(addedAmount);
         totalRentedAmount += addedAmount;
 
+        // Add the part taken as fees to the Reserve
         reserveAmount += (addedAmount * reserveRatio) / MAX_BPS;
 
         emit NotifyRentedAmount(manager, pod, addedAmount);
@@ -340,11 +363,14 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         if(amount == 0) revert Errors.NullAmount();
         if(amount > podManagers[manager].totalRented) revert Errors.AmountExceedsDebt();
 
+        // Fetch Aave Safety Module rewards & stake them into stkAAVE
         _getStkAaveRewards();
 
         // We consider that pod give MAX_UINT256 allowance to this contract when created
         IERC20(STK_AAVE).safeTransferFrom(pod, address(this), amount);
-        podManagers[manager].totalRented -= safe128(amount);
+        // Pull the tokens from the Pod, and update the tracked rented amount for the
+        // corresponding Manager
+        podManagers[manager].totalRented -= safe248(amount);
         totalRentedAmount -= amount;
 
         emit PullFromPod(manager, pod, amount);
@@ -366,14 +392,17 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         if (receiver == address(0)) revert Errors.AddressZero();
         if (amount == 0) revert Errors.NullAmount();
 
+        // Fetch Aave Safety Module rewards & stake them into stkAAVE
         _getStkAaveRewards();
 
         // We need to get the index before pulling the assets
         // so we can have the correct one based on previous stkAave claim
         uint256 _currentIndex = _getCurrentIndex();
 
+        // Pull tokens from the depositor
         IERC20(STK_AAVE).safeTransferFrom(depositor, address(this), amount);
 
+        // Mint the scaled balance of the user to match the deposited amount
         uint256 minted = _mint(receiver, amount, _currentIndex);
 
         afterDeposit(amount);
@@ -390,14 +419,17 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         if (receiver == address(0) || owner == address(0)) revert Errors.AddressZero();
         if (amount == 0) revert Errors.NullAmount();
 
+        // Fetch Aave Safety Module rewards & stake them into stkAAVE
         _getStkAaveRewards();
 
+        // If the user wants to withdraw their full balance
         bool _maxWithdraw;
         if(amount == MAX_UINT256) {
             amount = balanceOf(owner);
             _maxWithdraw = true;
         }
 
+        // Check that the caller has the allowance to withdraw for the given owner
         if (owner != sender) {
             uint256 allowed = _allowances[owner][sender];
             if (allowed < amount) revert Errors.ERC20_AmountOverAllowance();
@@ -407,14 +439,17 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
 
         IERC20 _stkAave = IERC20(STK_AAVE);
 
+        // Check that the Vault has enough stkAave to send
         uint256 availableBalance = _stkAave.balanceOf(address(this));
         availableBalance = reserveAmount >= availableBalance ? 0 : availableBalance - reserveAmount;
         if(amount > availableBalance) revert Errors.NotEnoughAvailableFunds();
 
+        // Burn the scaled balance matching the amount to withdraw
         uint256 burned = _burn(owner, amount, _maxWithdraw);
 
         beforeWithdraw(amount);
 
+        // Send the tokens to the given receiver
         _stkAave.safeTransfer(receiver, amount);
 
         return (amount, burned);
@@ -446,6 +481,7 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
             // Claim the AAVE tokens
             _stkAave.claimRewards(address(this), pendingRewards);
 
+            // Set a part of the claimed amount as the Reserve (protocol fees)
             reserveAmount += (pendingRewards * reserveRatio) / MAX_BPS;
         }
 
@@ -453,6 +489,7 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         uint256 currentBalance = _aave.balanceOf(address(this));
         
         if(currentBalance > 0) {
+            // Increase allowance for the Safety Module & stake AAVE into stkAAVE
             _aave.safeIncreaseAllowance(STK_AAVE, currentBalance);
             _stkAave.stake(address(this), currentBalance);
         }
@@ -554,6 +591,7 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         if(amount == 0) revert Errors.NullAmount();
         if(from == address(0)) revert Errors.AddressZero();
 
+        // Fetch Aave Safety Module rewards & stake them into stkAAVE
         _getStkAaveRewards();
 
         reserveAmount += amount;
@@ -574,6 +612,7 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         if(receiver == address(0)) revert Errors.AddressZero();
         if(amount > reserveAmount) revert Errors.ReserveTooLow();
 
+        // Fetch Aave Safety Module rewards & stake them into stkAAVE
         _getStkAaveRewards();
 
         reserveAmount -= amount;
@@ -600,6 +639,13 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         emit TokenRecovered(token, amount);
 
         return true;
+    }
+
+    // Maths
+
+    function safe248(uint256 n) internal pure returns (uint248) {
+        if(n > type(uint248).max) revert Errors.NumberExceed248Bits();
+        return uint248(n);
     }
 
 }

@@ -173,6 +173,7 @@ abstract contract ScalingERC20 is Context, IERC20 {
         if(sender == recipient) revert Errors.ERC20_SelfTransfer();
         if(amount == 0) revert Errors.ERC20_NullAmount();
 
+        // Get the scaled amount to transfer for the given amount
         uint128 _scaledAmount = safe128(amount.rayDiv(_getCurrentIndex()));
         _transferScaled(sender, recipient, _scaledAmount);
     }
@@ -218,6 +219,8 @@ abstract contract ScalingERC20 is Context, IERC20 {
     function _burn(address account, uint256 amount, bool maxWithdraw) internal virtual returns(uint256) {
         uint256 _currentIndex = _getCurrentIndex();
         uint256 _scaledBalance = _userStates[account].scaledBalance;
+
+        // if given maxWithdraw as true, we want to burn the whole balance for the user
         uint256 _scaledAmount = maxWithdraw ?  _scaledBalance: amount.rayDiv(_currentIndex);
         if(_scaledAmount == 0) revert Errors.ERC20_NullAmount();
         if(_scaledAmount > _scaledBalance) revert Errors.ERC20_AmountExceedBalance();

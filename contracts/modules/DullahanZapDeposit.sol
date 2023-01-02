@@ -67,8 +67,10 @@ contract DullahanZapDeposit is Owner, Pausable {
         if(amount == 0) revert Errors.NullAmount();
         if(sourceToken != aave && sourceToken != stkAave) revert Errors.InvalidSourceToken();
 
+        // Pull the tokens from the caller
         IERC20(sourceToken).safeTransferFrom(msg.sender, address(this), amount);
 
+        // If the source tokens is AAVE, stake them into stkAAVE
         if(sourceToken == aave) {
             IERC20(aave).safeIncreaseAllowance(stkAave, amount);
             IStakedAave(stkAave).stake(address(this), amount);
@@ -76,15 +78,17 @@ contract DullahanZapDeposit is Owner, Pausable {
 
         IERC20(stkAave).safeIncreaseAllowance(vault, amount);
 
-        // if no stake => return the tokens
-        // else => stake (approve 1st) on behalf of user
         if(stake) {
+            // If the caller desires to stake their tokens, deposit the stkAAVE in the Vault
+            // & stake them on behalf of the given receiver
             uint256 shares = DullahanVault(vault).deposit(amount, address(this));
             if(shares != amount) revert Errors.DepositFailed();
 
             IERC20(vault).safeIncreaseAllowance(staking, amount);
             DullahanRewardsStaking(staking).stake(amount, receiver);
         } else {
+            // If the caller does not desire to stake their tokens, deposit
+            // the stkAAVE in the Vault on behalf of the given receiver address directly
             uint256 shares = DullahanVault(vault).deposit(amount, receiver);
             if(shares != amount) revert Errors.DepositFailed();
         }
