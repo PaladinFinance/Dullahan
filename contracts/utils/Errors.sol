@@ -60,6 +60,7 @@ library Errors {
     error NotPodManager();
     error FailPodStateUpdate();
     error MintAmountUnderMinimum();
+    error RepayFailed();
 
     // Pods Manager Errors
     error CallerNotValidPod();

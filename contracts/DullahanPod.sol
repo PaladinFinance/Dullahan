@@ -193,20 +193,7 @@ contract DullahanPod is ReentrancyGuard {
         if(receiver == address(0)) revert Errors.AddressZero();
         if(!IDullahanPodManager(manager).updatePodState(address(this))) revert Errors.FailPodStateUpdate();
         
-        // If given MAX_UINT256, we want to withdraw all the collateral
-        if(amount == MAX_UINT256) amount = IERC20(aToken).balanceOf(address(this));
-
-        // Not allowed to withdraw collateral before paying the owed fees,
-        // in case we need to liquidate part if this collateral to pay
-        // the fees owed by this Pod.
-        if(
-            IDullahanPodManager(manager).podOwedFees(address(this)) > 0
-        ) revert Errors.CollateralBlocked();
-
-        // Withdraw from the Aave Pool & send directly to the given receiver
-        IAavePool(DullahanRegistry(registry).AAVE_POOL_V3()).withdraw(collateral, amount, receiver);
-
-        emit CollateralWithdrawn(collateral, amount);
+        _withdrawCollateral(amount, receiver);
     }
 
     function claimAaveExtraRewards(address receiver) external nonReentrant isInitialized onlyPodOwner {
@@ -222,7 +209,7 @@ contract DullahanPod is ReentrancyGuard {
         _getStkAaveRewards();
     }
 
-    function mintGHO(uint256 amountToMint, address receiver) external nonReentrant isInitialized onlyPodOwner returns(uint256 mintedAmount) {
+    function mintGho(uint256 amountToMint, address receiver) external nonReentrant isInitialized onlyPodOwner returns(uint256 mintedAmount) {
         if(amountToMint == 0) revert Errors.NullAmount();
         if(receiver == address(0)) revert Errors.AddressZero();
         if(amountToMint < MIN_MINT_AMOUNT) revert Errors.MintAmountUnderMinimum();
@@ -258,58 +245,28 @@ contract DullahanPod is ReentrancyGuard {
 
     // repay GHO -> always take the owed fees before, and then repay to Aave Market
     // Can give MAX_UINT256 to repay everything (needs max allowance)
-    function repayGHO(uint256 amountToRepay) external nonReentrant isInitialized onlyPodOwner returns(bool) {
-        // Use type(uint).max to repay all
+    function repayGho(uint256 amountToRepay) external nonReentrant isInitialized onlyPodOwner returns(bool) {
         if(amountToRepay == 0) revert Errors.NullAmount();
-        IDullahanPodManager _manager = IDullahanPodManager(manager);
-        if(!_manager.updatePodState(address(this))) revert Errors.FailPodStateUpdate();
-
-        // Update this contract stkAAVE current balance is there is one
-        _getStkAaveRewards();
-
-        // Fetch the current owed fees for this Pod from the Pod Manager
-        uint256 owedFees = _manager.podOwedFees(address(this));
-
-        // If given the MAX_UINT256, we want to repay the fees and all the debt
-        if(amountToRepay == MAX_UINT256) {
-            amountToRepay = owedFees + podDebtBalance();
-        }
-
-        // Pull the GHO from the Pod Owner
-        IERC20 _gho = IERC20(DullahanRegistry(registry).GHO());
-        _gho.safeTransferFrom(msg.sender, address(this), amountToRepay);
-
-        uint256 realRepayAmount;
-        uint256 feesToPay;
-
-        // Repay in priority the owed fees, and then the debt to the Aave Pool
-        if(owedFees >= amountToRepay) {
-            feesToPay = amountToRepay;
-        } else {
-            realRepayAmount = amountToRepay - owedFees;
-            feesToPay = owedFees;
-        }
+        if(!IDullahanPodManager(manager).updatePodState(address(this))) revert Errors.FailPodStateUpdate();
         
-        // If there is owed fees to pay, transfer the needed amount to the Pod Manager & notify it
-        if(feesToPay > 0) {
-            _gho.safeTransfer(manager, feesToPay);
-            _manager.notifyPayFee(feesToPay);
-        }
+        return _repayGho(amountToRepay);
+    }
 
-        // If there is GHO debt to be repayed, increase allowance to the Aave Pool and repay the debt
-        if(realRepayAmount > 0) {
-            address _aavePool = DullahanRegistry(registry).AAVE_POOL_V3();
-            _gho.safeIncreaseAllowance(_aavePool, realRepayAmount);
-            IAavePool(_aavePool).repay(address(_gho), realRepayAmount, 2, address(this)); // 2 => variable mode (might need to change that)
-        }
+    function repayGhoAndWithdrawCollateral(
+        uint256 repayAmount,
+        uint256 withdrawAmount,
+        address receiver
+    ) external nonReentrant isInitialized onlyPodOwner returns(bool) {
+        if(repayAmount == 0 || withdrawAmount == 0) revert Errors.NullAmount();
+        if(receiver == address(0)) revert Errors.AddressZero();
+        if(!IDullahanPodManager(manager).updatePodState(address(this))) revert Errors.FailPodStateUpdate();
 
-        // Notify the Pod Manager, so not needed stkAave in this Pod
-        // can be freed & pull back by the Vaut
-        if(!_manager.freeStkAave(address(this))) revert Errors.FreeingStkAaveFailed();
+        bool repaySuccess = _repayGho(repayAmount);
+        if(!repaySuccess) revert Errors.RepayFailed();
+        
+        _withdrawCollateral(withdrawAmount, receiver);
 
-        emit GhoRepayed(amountToRepay);
-
-        return true;
+        return repaySuccess;
     }
 
     function rentStkAave() external nonReentrant isInitialized onlyPodOwner returns(bool) {
@@ -376,16 +333,84 @@ contract DullahanPod is ReentrancyGuard {
 
     // Internal functions
 
+    function _withdrawCollateral(uint256 amount, address receiver) internal {
+        // If given MAX_UINT256, we want to withdraw all the collateral
+        if(amount == MAX_UINT256) amount = IERC20(aToken).balanceOf(address(this));
+
+        // Not allowed to withdraw collateral before paying the owed fees,
+        // in case we need to liquidate part if this collateral to pay
+        // the fees owed by this Pod.
+        if(
+            IDullahanPodManager(manager).podOwedFees(address(this)) > 0
+        ) revert Errors.CollateralBlocked();
+
+        // Withdraw from the Aave Pool & send directly to the given receiver
+        IAavePool(DullahanRegistry(registry).AAVE_POOL_V3()).withdraw(collateral, amount, receiver);
+
+        emit CollateralWithdrawn(collateral, amount);
+    }
+    
+    function _repayGho(uint256 amountToRepay) internal returns(bool) {
+        IDullahanPodManager _manager = IDullahanPodManager(manager);
+
+        // Update this contract stkAAVE current balance is there is one
+        _getStkAaveRewards();
+
+        // Fetch the current owed fees for this Pod from the Pod Manager
+        uint256 owedFees = _manager.podOwedFees(address(this));
+
+        // If given the MAX_UINT256, we want to repay the fees and all the debt
+        if(amountToRepay == MAX_UINT256) {
+            amountToRepay = owedFees + podDebtBalance();
+        }
+
+        // Pull the GHO from the Pod Owner
+        IERC20 _gho = IERC20(DullahanRegistry(registry).GHO());
+        _gho.safeTransferFrom(msg.sender, address(this), amountToRepay);
+
+        uint256 realRepayAmount;
+        uint256 feesToPay;
+
+        // Repay in priority the owed fees, and then the debt to the Aave Pool
+        if(owedFees >= amountToRepay) {
+            feesToPay = amountToRepay;
+        } else {
+            realRepayAmount = amountToRepay - owedFees;
+            feesToPay = owedFees;
+        }
+        
+        // If there is owed fees to pay, transfer the needed amount to the Pod Manager & notify it
+        if(feesToPay > 0) {
+            _gho.safeTransfer(manager, feesToPay);
+            _manager.notifyPayFee(feesToPay);
+        }
+
+        // If there is GHO debt to be repayed, increase allowance to the Aave Pool and repay the debt
+        if(realRepayAmount > 0) {
+            address _aavePool = DullahanRegistry(registry).AAVE_POOL_V3();
+            _gho.safeIncreaseAllowance(_aavePool, realRepayAmount);
+            IAavePool(_aavePool).repay(address(_gho), realRepayAmount, 2, address(this)); // 2 => variable mode (might need to change that)
+        }
+
+        // Notify the Pod Manager, so not needed stkAave in this Pod
+        // can be freed & pull back by the Vaut
+        if(!_manager.freeStkAave(address(this))) revert Errors.FreeingStkAaveFailed();
+
+        emit GhoRepayed(amountToRepay);
+
+        return true;
+    }
+
     function _getStkAaveRewards() internal {
         IStakedAave _stkAave = IStakedAave(stkAave);
 
         // Get pending rewards amount
         uint256 pendingRewards = _stkAave.getTotalRewardsBalance(address(this));
 
-        if (pendingRewards > 0) {
-            // Claim the AAVE tokens
-            _stkAave.claimRewards(address(this), pendingRewards);
-        }
+        if(pendingRewards == 0) return;
+
+        // Claim the AAVE tokens
+        _stkAave.claimRewards(address(this), pendingRewards);
 
         IERC20 _aave = IERC20(aave);
         uint256 currentBalance = _aave.balanceOf(address(this));

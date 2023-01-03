@@ -224,11 +224,11 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
         ).to.be.revertedWith('NotInitialized')
 
         await expect(
-            implementation.connect(podOwner).mintGHO(50, podOwner.address)
+            implementation.connect(podOwner).mintGho(50, podOwner.address)
         ).to.be.revertedWith('NotInitialized')
 
         await expect(
-            implementation.connect(podOwner).repayGHO(50)
+            implementation.connect(podOwner).repayGho(50)
         ).to.be.revertedWith('NotInitialized')
 
         await expect(
@@ -607,7 +607,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
 
         });
 
-        it(' should withdraw all collaterla if given MAX UINT256', async () => {
+        it(' should withdraw all collateral if given MAX UINT256', async () => {
 
             await market.connect(admin).increaseUserDeposit(
                 collat.address,
@@ -651,7 +651,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
 
             await stkAave.connect(admin).transfer(vault.address, ethers.utils.parseEther('5000'))
 
-            await pod.connect(podOwner).mintGHO(borrow_amount, podOwner.address)
+            await pod.connect(podOwner).mintGho(borrow_amount, podOwner.address)
 
             await manager.connect(admin).setPodOwedFees(pod.address, fees_amount)
 
@@ -668,13 +668,13 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
 
             await stkAave.connect(admin).transfer(vault.address, ethers.utils.parseEther('5000'))
 
-            await pod.connect(podOwner).mintGHO(borrow_amount, podOwner.address)
+            await pod.connect(podOwner).mintGho(borrow_amount, podOwner.address)
 
             await manager.connect(admin).setPodOwedFees(pod.address, fees_amount)
 
             await gho.connect(admin).mint(podOwner.address, fees_amount)
             await gho.connect(podOwner).approve(pod.address, fees_amount)
-            await pod.connect(podOwner).repayGHO(fees_amount)
+            await pod.connect(podOwner).repayGho(fees_amount)
 
             const previous_pod_balance = await collat.balanceOf(pod.address)
             const previous_user_balance = await collat.balanceOf(podOwner.address)
@@ -872,7 +872,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             await collat.connect(podOwner).approve(pod.address, deposit_amount)
             await pod.connect(podOwner).depositCollateral(deposit_amount)
 
-            await pod.connect(podOwner).mintGHO(borrow_amount, podOwner.address)
+            await pod.connect(podOwner).mintGho(borrow_amount, podOwner.address)
 
             await advanceTime(WEEK.mul(2).toNumber())
 
@@ -990,7 +990,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
 
     });
 
-    describe('mintGHO', async () => {
+    describe('mintGho', async () => {
 
         const deposit_amount = ethers.utils.parseEther('500')
         const borrow_amount = ethers.utils.parseEther('200')
@@ -1023,7 +1023,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
 
             const previous_pod_debt = await ghoDebt.balanceOf(pod.address)
 
-            const mint_tx = await pod.connect(podOwner).mintGHO(borrow_amount, podOwner.address)
+            const mint_tx = await pod.connect(podOwner).mintGho(borrow_amount, podOwner.address)
 
             const new_pod_balance = await gho.balanceOf(pod.address)
             const new_user_balance = await gho.balanceOf(podOwner.address)
@@ -1049,7 +1049,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
 
             const previous_pod_rented_amount = await manager.podRentedAmount(pod.address)
 
-            const mint_tx = await pod.connect(podOwner).mintGHO(borrow_amount, podOwner.address)
+            const mint_tx = await pod.connect(podOwner).mintGho(borrow_amount, podOwner.address)
 
             const new_pod_balance = await stkAave.balanceOf(pod.address)
 
@@ -1071,7 +1071,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             const previous_manager_balance = await gho.balanceOf(manager.address)
             const previous_manager_reserve = await manager.reserveAmount()
 
-            const mint_tx = await pod.connect(podOwner).mintGHO(borrow_amount, podOwner.address)
+            const mint_tx = await pod.connect(podOwner).mintGho(borrow_amount, podOwner.address)
 
             const new_manager_balance = await gho.balanceOf(manager.address)
             const new_manager_reserve = await manager.reserveAmount()
@@ -1101,7 +1101,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
 
             const previous_pod_rented_amount = await manager.podRentedAmount(pod.address)
 
-            const mint_tx = await pod.connect(podOwner).mintGHO(bigger_borrow_amount, podOwner.address)
+            const mint_tx = await pod.connect(podOwner).mintGho(bigger_borrow_amount, podOwner.address)
 
             const new_pod_balance = await stkAave.balanceOf(pod.address)
 
@@ -1123,7 +1123,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
 
             const previous_pod_debt = await ghoDebt.balanceOf(pod.address)
 
-            const mint_tx = await pod.connect(podOwner).mintGHO(borrow_amount, otherUser.address)
+            const mint_tx = await pod.connect(podOwner).mintGho(borrow_amount, otherUser.address)
 
             const new_pod_balance = await gho.balanceOf(pod.address)
             const new_user_balance = await gho.balanceOf(podOwner.address)
@@ -1147,7 +1147,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
 
         it(' should update Pod state in Manager', async () => {
 
-            const mint_tx = await pod.connect(podOwner).mintGHO(borrow_amount, podOwner.address)
+            const mint_tx = await pod.connect(podOwner).mintGho(borrow_amount, podOwner.address)
 
             const tx_block = (await mint_tx).blockNumber
 
@@ -1160,7 +1160,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             const under_min_amount = BigNumber.from('5000000')
 
             await expect(
-                pod.connect(podOwner).mintGHO(under_min_amount, podOwner.address)
+                pod.connect(podOwner).mintGho(under_min_amount, podOwner.address)
             ).to.be.revertedWith('MintAmountUnderMinimum')
 
         });
@@ -1168,7 +1168,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
         it(' should fail if given address 0x0', async () => {
 
             await expect(
-                pod.connect(podOwner).mintGHO(borrow_amount, ethers.constants.AddressZero)
+                pod.connect(podOwner).mintGho(borrow_amount, ethers.constants.AddressZero)
             ).to.be.revertedWith('AddressZero')
 
         });
@@ -1176,7 +1176,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
         it(' should fail if given a null amount', async () => {
 
             await expect(
-                pod.connect(podOwner).mintGHO(0, podOwner.address)
+                pod.connect(podOwner).mintGho(0, podOwner.address)
             ).to.be.revertedWith('NullAmount')
 
         });
@@ -1184,18 +1184,18 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
         it(' should only be callable by the Pod owner', async () => {
 
             await expect(
-                pod.connect(admin).mintGHO(borrow_amount, podOwner.address)
+                pod.connect(admin).mintGho(borrow_amount, podOwner.address)
             ).to.be.revertedWith('NotPodOwner')
 
             await expect(
-                pod.connect(otherUser).mintGHO(borrow_amount, podOwner.address)
+                pod.connect(otherUser).mintGho(borrow_amount, podOwner.address)
             ).to.be.revertedWith('NotPodOwner')
 
         });
 
     });
 
-    describe('repayGHO', async () => {
+    describe('repayGho', async () => {
 
         const deposit_amount = ethers.utils.parseEther('500')
         const borrow_amount = ethers.utils.parseEther('200')
@@ -1222,7 +1222,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             await collat.connect(podOwner).approve(pod.address, deposit_amount)
             await pod.connect(podOwner).depositCollateral(deposit_amount)
 
-            await pod.connect(podOwner).mintGHO(borrow_amount, podOwner.address)
+            await pod.connect(podOwner).mintGho(borrow_amount, podOwner.address)
 
             await advanceTime(WEEK.mul(2).toNumber())
 
@@ -1239,7 +1239,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             const previous_owed_fees = await manager.podOwedFees(pod.address)
             const previous_pod_debt = await ghoDebt.balanceOf(pod.address)
 
-            const repay_tx = await pod.connect(podOwner).repayGHO(repay_amount)
+            const repay_tx = await pod.connect(podOwner).repayGho(repay_amount)
 
             const new_owed_fees = await manager.podOwedFees(pod.address)
             const new_pod_debt = await ghoDebt.balanceOf(pod.address)
@@ -1272,7 +1272,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
 
             const small_repay_amount = previous_owed_fees.div(2)
 
-            const repay_tx = await pod.connect(podOwner).repayGHO(small_repay_amount)
+            const repay_tx = await pod.connect(podOwner).repayGho(small_repay_amount)
 
             const new_owed_fees = await manager.podOwedFees(pod.address)
             const new_pod_debt = await ghoDebt.balanceOf(pod.address)
@@ -1300,7 +1300,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             const previous_owed_fees = await manager.podOwedFees(pod.address)
             const previous_pod_debt = await ghoDebt.balanceOf(pod.address)
 
-            const repay_tx = await pod.connect(podOwner).repayGHO(MAX_UINT256)
+            const repay_tx = await pod.connect(podOwner).repayGho(MAX_UINT256)
 
             expect(await manager.podOwedFees(pod.address)).to.be.eq(0)
             expect(await ghoDebt.balanceOf(pod.address)).to.be.eq(0)
@@ -1325,7 +1325,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
 
             await gho.connect(podOwner).approve(pod.address, repay_amount)
 
-            const repay_tx = await pod.connect(podOwner).repayGHO(repay_amount)
+            const repay_tx = await pod.connect(podOwner).repayGho(repay_amount)
 
             const tx_block = (await repay_tx).blockNumber
 
@@ -1339,7 +1339,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
 
             const previous_pod_balance = await stkAave.balanceOf(pod.address)
 
-            const repay_tx = await pod.connect(podOwner).repayGHO(repay_amount)
+            const repay_tx = await pod.connect(podOwner).repayGho(repay_amount)
 
             const tx_block = (await repay_tx).blockNumber
 
@@ -1381,7 +1381,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
 
             const previous_reserve = await manager.reserveAmount()
 
-            await pod.connect(podOwner).repayGHO(repay_amount)
+            await pod.connect(podOwner).repayGho(repay_amount)
 
             const new_reserve = await manager.reserveAmount()
 
@@ -1392,7 +1392,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
         it(' should fail if given a null amount', async () => {
 
             await expect(
-                pod.connect(podOwner).repayGHO(0)
+                pod.connect(podOwner).repayGho(0)
             ).to.be.revertedWith('NullAmount')
 
         });
@@ -1400,11 +1400,201 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
         it(' should only be callable by the Pod owner', async () => {
 
             await expect(
-                pod.connect(admin).repayGHO(repay_amount)
+                pod.connect(admin).repayGho(repay_amount)
             ).to.be.revertedWith('NotPodOwner')
 
             await expect(
-                pod.connect(otherUser).repayGHO(repay_amount)
+                pod.connect(otherUser).repayGho(repay_amount)
+            ).to.be.revertedWith('NotPodOwner')
+
+        });
+
+    });
+
+    describe('repayGhoAndWithdrawCollateral', async () => {
+
+        const deposit_amount = ethers.utils.parseEther('500')
+        const borrow_amount = ethers.utils.parseEther('200')
+
+        const repay_amount = ethers.utils.parseEther('100')
+        const extra_debt_amount = ethers.utils.parseEther('50')
+        const fee_amount = ethers.utils.parseEther('15')
+
+        const withdraw_amount = ethers.utils.parseEther('75')
+
+        beforeEach(async () => {
+
+            await stkAave.connect(admin).transfer(vault.address, ethers.utils.parseEther('5000'))
+
+            await pod.connect(admin).init(
+                manager.address,
+                vault.address,
+                registry.address,
+                podOwner.address,
+                collat.address,
+                aCollat.address,
+                delegate.address
+            )
+
+            await collat.connect(admin).mint(podOwner.address, deposit_amount.mul(2))
+
+            await collat.connect(podOwner).approve(pod.address, deposit_amount)
+            await pod.connect(podOwner).depositCollateral(deposit_amount)
+
+            await pod.connect(podOwner).mintGho(borrow_amount, podOwner.address)
+
+            await advanceTime(WEEK.mul(2).toNumber())
+
+            await market.increaseUserDebt(pod.address, extra_debt_amount)
+
+            await manager.setPodOwedFees(pod.address, fee_amount)
+
+        });
+
+        it(' should repay correctly the fees & debt, and allwo to withdraw some collateral', async () => {
+
+            await gho.connect(podOwner).approve(pod.address, repay_amount)
+
+            const previous_owed_fees = await manager.podOwedFees(pod.address)
+            const previous_pod_debt = await ghoDebt.balanceOf(pod.address)
+
+            const previous_pod_balance = await collat.balanceOf(pod.address)
+            const previous_user_balance = await collat.balanceOf(podOwner.address)
+            const previous_market_balance = await collat.balanceOf(market.address)
+
+            const previous_pod_aToken_balance = await aCollat.balanceOf(pod.address)
+
+            const repay_withdraw_tx = await pod.connect(podOwner).repayGhoAndWithdrawCollateral(repay_amount, withdraw_amount, podOwner.address)
+
+            const new_owed_fees = await manager.podOwedFees(pod.address)
+            const new_pod_debt = await ghoDebt.balanceOf(pod.address)
+
+            const expected_debt_repayed = repay_amount.sub(previous_owed_fees)
+
+            expect(new_owed_fees).to.be.eq(0)
+            expect(new_pod_debt).to.be.eq(previous_pod_debt.sub(expected_debt_repayed))
+
+            await expect(repay_withdraw_tx).to.emit(gho, "Transfer")
+            .withArgs(podOwner.address, pod.address, repay_amount);
+
+            await expect(repay_withdraw_tx).to.emit(gho, "Transfer")
+            .withArgs(pod.address, manager.address, previous_owed_fees);
+
+            await expect(repay_withdraw_tx).to.emit(gho, "Transfer")
+            .withArgs(pod.address, ethers.constants.AddressZero, expected_debt_repayed);
+
+            await expect(repay_withdraw_tx).to.emit(pod, "GhoRepayed")
+            .withArgs(repay_amount);
+
+            const new_pod_balance = await collat.balanceOf(pod.address)
+            const new_user_balance = await collat.balanceOf(podOwner.address)
+            const new_market_balance = await collat.balanceOf(market.address)
+
+            const new_pod_aToken_balance = await aCollat.balanceOf(pod.address)
+
+            expect(new_pod_balance).to.be.eq(previous_pod_balance)
+            expect(new_user_balance).to.be.eq(previous_user_balance.add(withdraw_amount))
+            expect(new_market_balance).to.be.eq(previous_market_balance.sub(withdraw_amount))
+
+            expect(new_pod_aToken_balance).to.be.eq(previous_pod_aToken_balance.sub(withdraw_amount))
+
+            await expect(repay_withdraw_tx).to.emit(collat, "Transfer")
+            .withArgs(market.address, podOwner.address, withdraw_amount);
+
+            await expect(repay_withdraw_tx).to.emit(pod, "CollateralWithdrawn")
+            .withArgs(collat.address, withdraw_amount);
+
+        });
+
+        it(' should repay all & withdraw all if given MAX_UINT256 on both parameters', async () => {
+
+            await gho.connect(admin).mint(podOwner.address, ethers.utils.parseEther('500'))
+
+            await market.connect(admin).increaseUserDeposit(
+                collat.address,
+                pod.address,
+                (await aCollat.balanceOf(pod.address)).mul(2).div(10)
+            )
+
+            await gho.connect(podOwner).approve(pod.address, MAX_UINT256)
+
+            const previous_owed_fees = await manager.podOwedFees(pod.address)
+            const previous_pod_debt = await ghoDebt.balanceOf(pod.address)
+
+            const previous_pod_balance = await collat.balanceOf(pod.address)
+            const previous_user_balance = await collat.balanceOf(podOwner.address)
+            const previous_market_balance = await collat.balanceOf(market.address)
+
+            const previous_pod_aToken_balance = await aCollat.balanceOf(pod.address)
+
+            const repay_withdraw_tx = await pod.connect(podOwner).repayGhoAndWithdrawCollateral(MAX_UINT256, MAX_UINT256, podOwner.address)
+
+            expect(await manager.podOwedFees(pod.address)).to.be.eq(0)
+            expect(await ghoDebt.balanceOf(pod.address)).to.be.eq(0)
+
+            const total_amount = previous_owed_fees.add(previous_pod_debt)
+
+            await expect(repay_withdraw_tx).to.emit(gho, "Transfer")
+            .withArgs(podOwner.address, pod.address, total_amount);
+
+            await expect(repay_withdraw_tx).to.emit(gho, "Transfer")
+            .withArgs(pod.address, manager.address, previous_owed_fees);
+
+            await expect(repay_withdraw_tx).to.emit(gho, "Transfer")
+            .withArgs(pod.address, ethers.constants.AddressZero, previous_pod_debt);
+
+            await expect(repay_withdraw_tx).to.emit(pod, "GhoRepayed")
+            .withArgs(total_amount);
+
+            const new_pod_balance = await collat.balanceOf(pod.address)
+            const new_user_balance = await collat.balanceOf(podOwner.address)
+            const new_market_balance = await collat.balanceOf(market.address)
+
+            const new_pod_aToken_balance = await aCollat.balanceOf(pod.address)
+
+            expect(new_pod_balance).to.be.eq(previous_pod_balance)
+            expect(new_user_balance).to.be.eq(previous_user_balance.add(previous_pod_aToken_balance))
+            expect(new_market_balance).to.be.eq(previous_market_balance.sub(previous_pod_aToken_balance))
+
+            expect(new_pod_aToken_balance).to.be.eq(previous_pod_aToken_balance.sub(previous_pod_aToken_balance))
+            expect(new_pod_aToken_balance).to.be.eq(0)
+
+            await expect(repay_withdraw_tx).to.emit(collat, "Transfer")
+            .withArgs(market.address, podOwner.address, previous_pod_aToken_balance);
+
+            await expect(repay_withdraw_tx).to.emit(pod, "CollateralWithdrawn")
+            .withArgs(collat.address, previous_pod_aToken_balance);
+
+        });
+
+        it(' should fail if given address 0x0', async () => {
+
+            await expect(
+                pod.connect(podOwner).repayGhoAndWithdrawCollateral(repay_amount, withdraw_amount, ethers.constants.AddressZero)
+            ).to.be.revertedWith('AddressZero')
+
+        });
+        
+        it(' should fail if given a null amount', async () => {
+
+            await expect(
+                pod.connect(podOwner).repayGhoAndWithdrawCollateral(repay_amount, 0, podOwner.address)
+            ).to.be.revertedWith('NullAmount')
+
+            await expect(
+                pod.connect(podOwner).repayGhoAndWithdrawCollateral(0, withdraw_amount, podOwner.address)
+            ).to.be.revertedWith('NullAmount')
+
+        });
+
+        it(' should only be callable by the Pod owner', async () => {
+
+            await expect(
+                pod.connect(admin).repayGhoAndWithdrawCollateral(repay_amount, withdraw_amount, podOwner.address)
+            ).to.be.revertedWith('NotPodOwner')
+
+            await expect(
+                pod.connect(otherUser).repayGhoAndWithdrawCollateral(repay_amount, withdraw_amount, podOwner.address)
             ).to.be.revertedWith('NotPodOwner')
 
         });
@@ -1435,7 +1625,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             await collat.connect(podOwner).approve(pod.address, deposit_amount)
             await pod.connect(podOwner).depositCollateral(deposit_amount)
 
-            await pod.connect(podOwner).mintGHO(borrow_amount, podOwner.address)
+            await pod.connect(podOwner).mintGho(borrow_amount, podOwner.address)
 
             await advanceTime(WEEK.mul(2).toNumber())
 
@@ -1489,7 +1679,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             const repay_amount = ethers.utils.parseEther('100')
 
             await gho.connect(podOwner).approve(pod.address, repay_amount)
-            await pod.connect(podOwner).repayGHO(repay_amount)
+            await pod.connect(podOwner).repayGho(repay_amount)
 
             const previous_pod_balance = await stkAave.balanceOf(pod.address)
 
