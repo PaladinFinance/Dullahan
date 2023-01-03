@@ -355,29 +355,6 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         }
     }
 
-    function updatePodRegistry(address pod) public onlyOwner {
-        if(pods[pod].podAddress == address(0)) revert Errors.PodInvalid();
-
-        DullahanPod(pod).updateRegistry(registry);
-    }
-
-    function updateMultiplePodsRegistry(address[] calldata podList) external onlyOwner {
-        uint256 length = podList.length;
-        for(uint256 i; i < length;){
-            updatePodRegistry(podList[i]);
-            unchecked { ++i; }
-        }
-    }
-
-    function updateAllPodsRegistry() external onlyOwner {
-        address[] memory _pods = allPods;
-        uint256 length = _pods.length;
-        for(uint256 i; i < length;){
-            updatePodRegistry(_pods[i]);
-            unchecked { ++i; }
-        }
-    }
-
     function processReserve() external nonReentrant whenNotPaused returns(bool) {
         if(!_updateGlobalState()) revert Errors.FailStateUpdate();
         uint256 currentReserveAmount = reserveAmount;
@@ -407,6 +384,9 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
     function getStkAave(uint256 amountToMint) external nonReentrant whenNotPaused isValidPod returns(bool){
         address pod = msg.sender;
+
+        // Update the Pod state with the previous stkAave rented amount
+        _updatePodState(pod);
 
         // Caculate the needed amount of stkaave based on current GHO debt + amount of GHO wanted for minting
         // & Fetch the current Pod stkAave balance
@@ -473,8 +453,12 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     // Internal functions
 
     function _calculatedNeededStkAave(address pod, uint256 addedDebtAmount) internal returns(uint256) {
-        // to do
-        return 0;
+        // !!!!!!!!!!!!!!!!!!!!!!!!!
+        // !!!!!!!!!!!!!!!!!!!!!!!!!
+        // !!!    To Change      !!!
+        // !!!!!!!!!!!!!!!!!!!!!!!!!
+        uint256 totalDebtBalance = IERC20(DullahanRegistry(registry).DEBT_GHO()).balanceOf(pod) + addedDebtAmount;
+        return (totalDebtBalance * UNIT) / (100 ether);
     }
 
     function _accruedIndex() internal view returns(uint256) {
@@ -520,6 +504,29 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
 
     // Admin functions
+
+    function updatePodRegistry(address pod) public onlyOwner {
+        if(pods[pod].podAddress == address(0)) revert Errors.PodInvalid();
+
+        DullahanPod(pod).updateRegistry(registry);
+    }
+
+    function updateMultiplePodsRegistry(address[] calldata podList) external onlyOwner {
+        uint256 length = podList.length;
+        for(uint256 i; i < length;){
+            updatePodRegistry(podList[i]);
+            unchecked { ++i; }
+        }
+    }
+
+    function updateAllPodsRegistry() external onlyOwner {
+        address[] memory _pods = allPods;
+        uint256 length = _pods.length;
+        for(uint256 i; i < length;){
+            updatePodRegistry(_pods[i]);
+            unchecked { ++i; }
+        }
+    }
     
     /**
      * @notice Pause the contract
@@ -566,6 +573,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
     function updateFeeModule(address newModule) external onlyOwner {
         if(newModule == address(0)) revert Errors.AddressZero();
+        if(newModule == feeModule) revert Errors.SameAddress();
 
         address oldMoldule = feeModule;
         feeModule = newModule;
@@ -573,8 +581,9 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         emit FeeModuleUpdated(oldMoldule, newModule);
     }
 
-    function updateOraclepModule(address newModule) external onlyOwner {
+    function updateOracleModule(address newModule) external onlyOwner {
         if(newModule == address(0)) revert Errors.AddressZero();
+        if(newModule == oracleModule) revert Errors.SameAddress();
 
         address oldMoldule = oracleModule;
         oracleModule = newModule;

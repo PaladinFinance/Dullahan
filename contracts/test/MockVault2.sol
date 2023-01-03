@@ -13,6 +13,8 @@ contract MockVault2 {
 
     address public manager;
 
+    address public delegate;
+
     constructor(
         address _aave,
         address _stkAave
@@ -47,6 +49,14 @@ contract MockVault2 {
 
     function withdrawStkAave(uint256 amount) external {
         IERC20(STK_AAVE).safeTransfer(msg.sender, amount);
+    }
+
+    function setDelegate(address _delegate) external {
+        delegate = _delegate;
+    }
+
+    function getDelegate() external view returns(address) {
+        return delegate;
     }
 
 }
