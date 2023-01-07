@@ -11,6 +11,7 @@ import { MockRewards } from "../../typechain/test/MockRewards";
 import { MockOracle } from "../../typechain/test/MockOracle";
 import { MockFeeModule } from "../../typechain/test/MockFeeModule";
 import { MockVault2 } from "../../typechain/test/MockVault2";
+import { MockStakingRewards } from "../../typechain/test/MockStakingRewards";
 import { DullahanRegistry } from "../../typechain/modules/DullahanRegistry";
 import { MockPod__factory } from "../../typechain/factories/test/MockPod__factory";
 import { IERC20 } from "../../typechain/oz/interfaces/IERC20";
@@ -48,6 +49,7 @@ let marketFactory: ContractFactory
 let vaultFactory: ContractFactory
 let oracleFactory: ContractFactory
 let feeModuleFactory: ContractFactory
+let stakingFactory: ContractFactory
 
 const UNIT = ethers.utils.parseEther('1')
 const MAX_BPS = BigNumber.from('10000')
@@ -63,6 +65,7 @@ describe('DullahanPodManager contract tests - Admin functions', () => {
     let pod: MockPod
 
     let vault: MockVault2
+    let staking: MockStakingRewards
 
     let collat: MockERC20
     let aCollat: MockERC20
@@ -108,6 +111,7 @@ describe('DullahanPodManager contract tests - Admin functions', () => {
         registryFactory = await ethers.getContractFactory("DullahanRegistry");
         oracleFactory = await ethers.getContractFactory("MockOracle");
         feeModuleFactory = await ethers.getContractFactory("MockFeeModule");
+        stakingFactory = await ethers.getContractFactory("MockStakingRewards");
 
         aave = IERC20__factory.connect(AAVE, provider);
         stkAave = IERC20__factory.connect(STK_AAVE, provider);
@@ -169,12 +173,15 @@ describe('DullahanPodManager contract tests - Admin functions', () => {
         )) as MockVault2;
         await vault.deployed();
 
+        staking = (await stakingFactory.connect(admin).deploy()) as MockStakingRewards;
+        await staking.deployed();
+
         podImpl = (await podFactory.connect(admin).deploy()) as MockPod;
         await podImpl.deployed();
 
         manager = (await managerFactory.connect(admin).deploy(
             vault.address,
-            rewardsController.address,
+            staking.address,
             feeChest.address,
             podImpl.address,
             registry.address,
@@ -198,7 +205,7 @@ describe('DullahanPodManager contract tests - Admin functions', () => {
         expect(await manager.owner()).to.be.eq(admin.address)
 
         expect(await manager.vault()).to.be.eq(vault.address)
-        expect(await manager.rewardsStaking()).to.be.eq(rewardsController.address)
+        expect(await manager.rewardsStaking()).to.be.eq(staking.address)
         expect(await manager.protocolFeeChest()).to.be.eq(feeChest.address)
         expect(await manager.podImplementation()).to.be.eq(podImpl.address)
         expect(await manager.registry()).to.be.eq(registry.address)

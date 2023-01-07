@@ -15,6 +15,8 @@ contract MockVault2 {
 
     address public delegate;
 
+    mapping(address => uint256) public managerRentedAmounts;
+
     constructor(
         address _aave,
         address _stkAave
@@ -32,16 +34,19 @@ contract MockVault2 {
     }
 
     function rentStkAave(address pod, uint256 amount) external {
+        managerRentedAmounts[msg.sender] += amount;
 
         IERC20 _stkAave = IERC20(STK_AAVE);
         _stkAave.safeTransfer(pod, amount);
     }
 
     function notifyRentedAmount(address pod, uint256 addedAmount) external {
-        pod; addedAmount;
+        pod;
+        managerRentedAmounts[msg.sender] += addedAmount;
     }
 
     function pullRentedStkAave(address pod, uint256 amount) external {
+        managerRentedAmounts[msg.sender] -= amount;
 
         // We consider that pod give MAX_UINT256 allowance to this contract when created
         IERC20(STK_AAVE).safeTransferFrom(pod, address(this), amount);

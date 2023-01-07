@@ -146,6 +146,8 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         registry = _registry;
         feeModule = _feeModule;
         oracleModule = _oracleModule;
+
+        lastUpdatedIndex = block.timestamp;
     }
 
 
@@ -157,7 +159,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
     function podCurrentOwedFees(address pod) public view returns(uint256) {
         if(pods[pod].lastIndex == 0) return 0;
-        return pods[pod].accruedFees + (getCurrentIndex() - pods[pod].lastIndex) * pods[pod].rentedAmount;
+        return pods[pod].accruedFees + (((getCurrentIndex() - pods[pod].lastIndex) * pods[pod].rentedAmount) / UNIT);
     }
 
     function podOwedFees(address pod) public view returns(uint256) {
@@ -192,7 +194,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         // Get amount of collateral to liquidate
         collateralAmount = IOracleModule(oracleModule).getCollateralAmount(_pod.collateral, owedFees);
         // Extra ratio on amount to liquidate: Penality + liquidation bonus
-        collateralAmount = (collateralAmount * extraLiquidationRatio) / MAX_BPS;
+        collateralAmount += (collateralAmount * extraLiquidationRatio) / MAX_BPS;
 
         // If the Pod doesn't have enough collateral left to cover all the fees owed,
         // take all the collateral (the whole aToken balance).
@@ -203,7 +205,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
             // Calculate the reduced amount of fees to be received based on real collateral amount we can get
             feeAmount = IOracleModule(oracleModule).getFeeAmount(
                 _pod.collateral,
-                (collateralAmount * (MAX_BPS - extraLiquidationRatio)) / MAX_BPS
+                (collateralAmount * MAX_BPS) / (MAX_BPS + extraLiquidationRatio)
             );
         }
     }
@@ -243,6 +245,10 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         emit PodCreation(collateral, podOwner, newPod);
 
         return newPod;
+    }
+
+    function updateGlobalState() external whenNotPaused returns(bool) {
+        return _updateGlobalState();
     }
 
     function updatePodState(address pod) external nonReentrant whenNotPaused returns(bool) {
@@ -311,7 +317,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         // Get amount of collateral to liquidate
         uint256 collateralAmount = IOracleModule(oracleModule).getCollateralAmount(_pod.collateral, owedFees);
         // Extra ratio on amount to liquidate: Penality + liquidation bonus
-        collateralAmount = (collateralAmount * extraLiquidationRatio) / MAX_BPS;
+        collateralAmount += (collateralAmount * extraLiquidationRatio) / MAX_BPS;
 
         // If the Pod doesn't have enough collateral left to cover all the fees owed,
         // take all the collateral (the whole aToken balance).
@@ -322,7 +328,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
             // Calculate the reduced amount of fees to be received based on real collateral amount we can get
             paidFees = IOracleModule(oracleModule).getFeeAmount(
                 _pod.collateral,
-                (collateralAmount * (MAX_BPS - extraLiquidationRatio)) / MAX_BPS
+                (collateralAmount * MAX_BPS) / (MAX_BPS + extraLiquidationRatio)
             );
         }
 
@@ -414,7 +420,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         return true;
     }
 
-    function notifyStkAaveClaim(uint256 claimedAmount) external nonReentrant isValidPod {
+    function notifyStkAaveClaim(uint256 claimedAmount) external isValidPod {
         address _pod = msg.sender;
 
         // Update the Pod state with the previous stkAave rented amount
@@ -431,7 +437,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
     function notifyPayFee(uint256 feeAmount) external nonReentrant isValidPod {
         address _pod = msg.sender;
-        // Update the amount of fees woed by the Pod
+        // Update the amount of fees owed by the Pod
         pods[_pod].accruedFees -= feeAmount;
 
         // And set the received fees as Reserve
@@ -458,7 +464,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         // !!!    To Change      !!!
         // !!!!!!!!!!!!!!!!!!!!!!!!!
         uint256 totalDebtBalance = IERC20(DullahanRegistry(registry).DEBT_GHO()).balanceOf(pod) + addedDebtAmount;
-        return (totalDebtBalance * UNIT) / (100 ether);
+        return (totalDebtBalance * UNIT) / (50 ether);
     }
 
     function _accruedIndex() internal view returns(uint256) {
@@ -496,7 +502,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         _pod.lastUpdate = block.timestamp;
 
         if(_pod.rentedAmount != 0 && _oldPodIndex != _lastUpdatedIndex){
-            _pod.accruedFees += (_lastUpdatedIndex - _oldPodIndex) * _pod.rentedAmount;
+            _pod.accruedFees += ((_lastUpdatedIndex - _oldPodIndex) * _pod.rentedAmount) / UNIT;
         }
 
         return true;

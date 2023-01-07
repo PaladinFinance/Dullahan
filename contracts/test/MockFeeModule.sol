@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 contract MockFeeModule {
 
     uint256 public utilRate;
-    uint256 public feePerSec;
+    uint256 public feePerSec = 0.0000000315 ether;
 
     function setUitlRate(uint256 value) public {
         utilRate = value;

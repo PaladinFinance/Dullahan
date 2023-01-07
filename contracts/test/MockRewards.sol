@@ -8,7 +8,7 @@ import "./MockERC20.sol";
 contract MockRewards {
     using SafeERC20 for IERC20;
 
-    address public rewardToken;
+    address public rewardToken1;
     address public rewardToken2;
 
     address[] public rewardList;
@@ -16,13 +16,13 @@ contract MockRewards {
     mapping(address => mapping(address => uint256)) public userRewards;
 
     constructor(
-        address _rewardToken,
+        address _rewardToken1,
         address _rewardToken2
     ) {
-        rewardToken = _rewardToken;
+        rewardToken1 = _rewardToken1;
         rewardToken2 = _rewardToken2;
 
-        rewardList.push(rewardToken);
+        rewardList.push(rewardToken1);
         rewardList.push(rewardToken2);
     }
 

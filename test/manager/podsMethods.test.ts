@@ -11,6 +11,7 @@ import { MockRewards } from "../../typechain/test/MockRewards";
 import { MockOracle } from "../../typechain/test/MockOracle";
 import { MockFeeModule } from "../../typechain/test/MockFeeModule";
 import { MockVault2 } from "../../typechain/test/MockVault2";
+import { MockStakingRewards } from "../../typechain/test/MockStakingRewards";
 import { DullahanRegistry } from "../../typechain/modules/DullahanRegistry";
 import { MockPod__factory } from "../../typechain/factories/test/MockPod__factory";
 import { IERC20 } from "../../typechain/oz/interfaces/IERC20";
@@ -48,13 +49,14 @@ let marketFactory: ContractFactory
 let vaultFactory: ContractFactory
 let oracleFactory: ContractFactory
 let feeModuleFactory: ContractFactory
+let stakingFactory: ContractFactory
 
 const UNIT = ethers.utils.parseEther('1')
 const MAX_BPS = BigNumber.from('10000')
 const MAX_UINT256 = ethers.constants.MaxUint256
 const WEEK = BigNumber.from(7 * 86400);
 
-describe('DullahanPodManager contract tests - Admin functions', () => {
+describe('DullahanPodManager contract tests - Pods only functions', () => {
     let admin: SignerWithAddress
 
     let manager: DullahanPodManager
@@ -65,6 +67,7 @@ describe('DullahanPodManager contract tests - Admin functions', () => {
     let pod3: MockPod
 
     let vault: MockVault2
+    let staking: MockStakingRewards
 
     let collat: MockERC20
     let aCollat: MockERC20
@@ -92,6 +95,8 @@ describe('DullahanPodManager contract tests - Admin functions', () => {
     let podOwner: SignerWithAddress
     let otherUser: SignerWithAddress
 
+    const stkAave_calculation_ratio = ethers.utils.parseEther('50')
+
     before(async () => {
         await resetFork();
 
@@ -106,6 +111,7 @@ describe('DullahanPodManager contract tests - Admin functions', () => {
         registryFactory = await ethers.getContractFactory("DullahanRegistry");
         oracleFactory = await ethers.getContractFactory("MockOracle");
         feeModuleFactory = await ethers.getContractFactory("MockFeeModule");
+        stakingFactory = await ethers.getContractFactory("MockStakingRewards");
 
         aave = IERC20__factory.connect(AAVE, provider);
         stkAave = IERC20__factory.connect(STK_AAVE, provider);
@@ -167,12 +173,15 @@ describe('DullahanPodManager contract tests - Admin functions', () => {
         )) as MockVault2;
         await vault.deployed();
 
+        staking = (await stakingFactory.connect(admin).deploy()) as MockStakingRewards;
+        await staking.deployed();
+
         podImpl = (await podFactory.connect(admin).deploy()) as MockPod;
         await podImpl.deployed();
 
         manager = (await managerFactory.connect(admin).deploy(
             vault.address,
-            rewardsController.address,
+            staking.address,
             feeChest.address,
             podImpl.address,
             registry.address,
@@ -206,7 +215,7 @@ describe('DullahanPodManager contract tests - Admin functions', () => {
         expect(await manager.owner()).to.be.eq(admin.address)
 
         expect(await manager.vault()).to.be.eq(vault.address)
-        expect(await manager.rewardsStaking()).to.be.eq(rewardsController.address)
+        expect(await manager.rewardsStaking()).to.be.eq(staking.address)
         expect(await manager.protocolFeeChest()).to.be.eq(feeChest.address)
         expect(await manager.podImplementation()).to.be.eq(podImpl.address)
         expect(await manager.registry()).to.be.eq(registry.address)
@@ -221,6 +230,8 @@ describe('DullahanPodManager contract tests - Admin functions', () => {
 
     describe('getStkAave', async () => {
 
+        const stkAave_vault_balance = ethers.utils.parseEther('1000')
+
         const previous_debt = ethers.utils.parseEther('1500')
         const added_debt = ethers.utils.parseEther('250')
 
@@ -228,50 +239,378 @@ describe('DullahanPodManager contract tests - Admin functions', () => {
 
             await ghoDebt.connect(admin).mint(pod.address, previous_debt)
 
-        });
-        
-        it(' should xx', async () => {
-
-
+            await stkAave.connect(admin).transfer(vault.address, stkAave_vault_balance)
 
         });
         
-        it(' should xx', async () => {
+        it(' should calculate and rent stkAave to the Pod (& emit correct Event)', async () => {
 
+            const prev_pod_stkAave_balance = await stkAave.balanceOf(pod.address)
+            const prev_manager_stkAave_balance = await stkAave.balanceOf(manager.address)
+            const prev_vault_stkAave_balance = await stkAave.balanceOf(vault.address)
 
+            const prev_pod_rented_amount = (await manager.pods(pod.address)).rentedAmount
+
+            const total_expected_debt = previous_debt.add(added_debt)
+
+            const tx = await pod.connect(podOwner).getStkAave(added_debt)
+
+            const expected_rent_amount = total_expected_debt.mul(UNIT).div(stkAave_calculation_ratio)
+
+            const new_pod_stkAave_balance = await stkAave.balanceOf(pod.address)
+            const new_manager_stkAave_balance = await stkAave.balanceOf(manager.address)
+            const new_vault_stkAave_balance = await stkAave.balanceOf(vault.address)
+
+            const new_pod_rented_amount = (await manager.pods(pod.address)).rentedAmount
+
+            expect(new_pod_stkAave_balance).to.be.eq(prev_pod_stkAave_balance.add(expected_rent_amount))
+            expect(new_manager_stkAave_balance).to.be.eq(prev_manager_stkAave_balance)
+            expect(new_vault_stkAave_balance).to.be.eq(prev_vault_stkAave_balance.sub(expected_rent_amount))
+
+            expect(new_pod_rented_amount).to.be.eq(prev_pod_rented_amount.add(expected_rent_amount))
+
+            await expect(tx).to.emit(stkAave, "Transfer")
+            .withArgs(vault.address, pod.address, expected_rent_amount);
+
+            await expect(tx).to.emit(manager, "RentedStkAave")
+            .withArgs(pod.address, expected_rent_amount);
 
         });
         
-        it(' should xx', async () => {
+        it(' should update the Pod state correctly', async () => {
 
+            const tx = await pod.connect(podOwner).getStkAave(added_debt)
 
+            const tx_timestamp = (await ethers.provider.getBlock((await tx).blockNumber || 0)).timestamp
 
-        });
-        
-        it(' should xx', async () => {
-
-
+            expect((await manager.pods(pod.address)).lastUpdate).to.be.eq(tx_timestamp)
 
         });
         
-        it(' should xx', async () => {
+        it(' should not rent stkAave if the Vault has no available', async () => {
 
+            await vault.connect(admin).withdrawStkAave(stkAave_vault_balance)
 
+            const prev_pod_stkAave_balance = await stkAave.balanceOf(pod.address)
+            const prev_manager_stkAave_balance = await stkAave.balanceOf(manager.address)
+            const prev_vault_stkAave_balance = await stkAave.balanceOf(vault.address)
+
+            const prev_pod_rented_amount = (await manager.pods(pod.address)).rentedAmount
+
+            const tx = await pod.connect(podOwner).getStkAave(added_debt)
+
+            const new_pod_stkAave_balance = await stkAave.balanceOf(pod.address)
+            const new_manager_stkAave_balance = await stkAave.balanceOf(manager.address)
+            const new_vault_stkAave_balance = await stkAave.balanceOf(vault.address)
+
+            const new_pod_rented_amount = (await manager.pods(pod.address)).rentedAmount
+
+            expect(new_pod_stkAave_balance).to.be.eq(prev_pod_stkAave_balance)
+            expect(new_manager_stkAave_balance).to.be.eq(prev_manager_stkAave_balance)
+            expect(new_vault_stkAave_balance).to.be.eq(prev_vault_stkAave_balance)
+
+            expect(new_pod_rented_amount).to.be.eq(prev_pod_rented_amount)
+
+            await expect(tx).not.to.emit(stkAave, "Transfer")
+
+            await expect(tx).not.to.emit(manager, "RentedStkAave")
+
+        });
+        
+        it(' should take all available if Vault does not have enough for calculated amount', async () => {
+
+            const vault_small_available_amount = ethers.utils.parseEther('10')
+
+            await vault.connect(admin).withdrawStkAave(stkAave_vault_balance.sub(vault_small_available_amount))
+
+            const prev_pod_stkAave_balance = await stkAave.balanceOf(pod.address)
+            const prev_manager_stkAave_balance = await stkAave.balanceOf(manager.address)
+            const prev_vault_stkAave_balance = await stkAave.balanceOf(vault.address)
+
+            const prev_pod_rented_amount = (await manager.pods(pod.address)).rentedAmount
+
+            const tx = await pod.connect(podOwner).getStkAave(added_debt)
+
+            const expected_rent_amount = vault_small_available_amount
+
+            const new_pod_stkAave_balance = await stkAave.balanceOf(pod.address)
+            const new_manager_stkAave_balance = await stkAave.balanceOf(manager.address)
+            const new_vault_stkAave_balance = await stkAave.balanceOf(vault.address)
+
+            const new_pod_rented_amount = (await manager.pods(pod.address)).rentedAmount
+
+            expect(new_pod_stkAave_balance).to.be.eq(prev_pod_stkAave_balance.add(expected_rent_amount))
+            expect(new_manager_stkAave_balance).to.be.eq(prev_manager_stkAave_balance)
+            expect(new_vault_stkAave_balance).to.be.eq(prev_vault_stkAave_balance.sub(expected_rent_amount))
+
+            expect(new_pod_rented_amount).to.be.eq(prev_pod_rented_amount.add(expected_rent_amount))
+
+            await expect(tx).to.emit(stkAave, "Transfer")
+            .withArgs(vault.address, pod.address, expected_rent_amount);
+
+            await expect(tx).to.emit(manager, "RentedStkAave")
+            .withArgs(pod.address, expected_rent_amount);
+
+        });
+        
+        it(' should only rent the needed amount - Pod already renting', async () => {
+
+            await pod2.connect(podOwner).getStkAave(previous_debt)
+
+            const prev_pod_stkAave_balance = await stkAave.balanceOf(pod2.address)
+            const prev_manager_stkAave_balance = await stkAave.balanceOf(manager.address)
+            const prev_vault_stkAave_balance = await stkAave.balanceOf(vault.address)
+
+            const prev_pod_rented_amount = (await manager.pods(pod2.address)).rentedAmount
+
+            const total_expected_debt = previous_debt.add(added_debt)
+
+            const tx = await pod2.connect(podOwner).getStkAave(added_debt)
+
+            const expected_needed_total_amount = total_expected_debt.mul(UNIT).div(stkAave_calculation_ratio)
+            const expected_rent_amount = expected_needed_total_amount.sub(prev_pod_stkAave_balance)
+
+            const new_pod_stkAave_balance = await stkAave.balanceOf(pod2.address)
+            const new_manager_stkAave_balance = await stkAave.balanceOf(manager.address)
+            const new_vault_stkAave_balance = await stkAave.balanceOf(vault.address)
+
+            const new_pod_rented_amount = (await manager.pods(pod2.address)).rentedAmount
+
+            expect(new_pod_stkAave_balance).to.be.eq(prev_pod_stkAave_balance.add(expected_rent_amount))
+            expect(new_manager_stkAave_balance).to.be.eq(prev_manager_stkAave_balance)
+            expect(new_vault_stkAave_balance).to.be.eq(prev_vault_stkAave_balance.sub(expected_rent_amount))
+
+            expect(new_pod_rented_amount).to.be.eq(prev_pod_rented_amount.add(expected_rent_amount))
+
+            await expect(tx).to.emit(stkAave, "Transfer")
+            .withArgs(vault.address, pod2.address, expected_rent_amount);
+
+            await expect(tx).to.emit(manager, "RentedStkAave")
+            .withArgs(pod2.address, expected_rent_amount);
+
+        });
+        
+        it(' should only be callable by valid Pods', async () => {
+
+            await expect(
+                manager.connect(podOwner).getStkAave(added_debt)
+            ).to.be.revertedWith('CallerNotValidPod')
 
         });
 
     });
 
-    describe('xxx', async () => {
+    describe('notifyStkAaveClaim', async () => {
+
+        const stkAave_vault_balance = ethers.utils.parseEther('1000')
+
+        const previous_debt = ethers.utils.parseEther('1500')
 
         beforeEach(async () => {
+            await stkAave.connect(admin).transfer(vault.address, stkAave_vault_balance)
 
+            await pod.connect(podOwner).getStkAave(previous_debt)
+
+            await advanceTime(WEEK.mul(4).toNumber())
 
         });
         
-        it(' should xx', async () => {
+        it(' should should update the Pod rented amount based on notified claim amount (& emit correct Event)', async () => {
 
+            const prev_pod_stkAave_balance = await stkAave.balanceOf(pod.address)
 
+            const prev_pod_rented_amount = (await manager.pods(pod.address)).rentedAmount
+
+            const tx = await pod.connect(podOwner).compoundStkAave()
+
+            const new_pod_stkAave_balance = await stkAave.balanceOf(pod.address)
+
+            const new_pod_rented_amount = (await manager.pods(pod.address)).rentedAmount
+
+            const balance_increase = new_pod_stkAave_balance.sub(prev_pod_stkAave_balance)
+
+            expect(new_pod_rented_amount).to.be.eq(prev_pod_rented_amount.add(balance_increase))
+
+            await expect(tx).to.emit(manager, "RentedStkAave")
+            .withArgs(pod.address, balance_increase);
+
+        });
+        
+        it(' should notify the Vault correctly', async () => {
+
+            const prev_vault_tracked_amount = await vault.managerRentedAmounts(manager.address)
+
+            const prev_pod_stkAave_balance = await stkAave.balanceOf(pod.address)
+
+            await pod.connect(podOwner).compoundStkAave()
+
+            const new_pod_stkAave_balance = await stkAave.balanceOf(pod.address)
+
+            const balance_increase = new_pod_stkAave_balance.sub(prev_pod_stkAave_balance)
+
+            const new_vault_tracked_amount = await vault.managerRentedAmounts(manager.address)
+
+            expect(new_vault_tracked_amount).to.be.eq(prev_vault_tracked_amount.add(balance_increase))
+
+        });
+        
+        it(' should update the Pod state correctly', async () => {
+
+            const tx = await pod.connect(podOwner).compoundStkAave()
+
+            const tx_timestamp = (await ethers.provider.getBlock((await tx).blockNumber || 0)).timestamp
+
+            expect((await manager.pods(pod.address)).lastUpdate).to.be.eq(tx_timestamp)
+
+        });
+        
+        it(' should only be callable by valid Pods', async () => {
+
+            await expect(
+                manager.connect(podOwner).notifyStkAaveClaim(ethers.utils.parseEther('12'))
+            ).to.be.revertedWith('CallerNotValidPod')
+
+        });
+
+    });
+
+    describe('notifyPayFee', async () => {
+
+        const stkAave_vault_balance = ethers.utils.parseEther('1000')
+
+        const previous_debt = ethers.utils.parseEther('3500')
+        const previous_debt2 = ethers.utils.parseEther('1500')
+
+        const pay_fees_amount = ethers.utils.parseEther('4.55')
+        const pay_fees_amount2 = ethers.utils.parseEther('2.5')
+
+        beforeEach(async () => {
+            await stkAave.connect(admin).transfer(vault.address, stkAave_vault_balance)
+
+            await pod.connect(podOwner).getStkAave(previous_debt)
+
+            await pod2.connect(podOwner).getStkAave(previous_debt2)
+
+            await advanceTime(WEEK.mul(5).toNumber())
+
+            await manager.connect(admin).updatePodState(pod.address)
+            await manager.connect(admin).updatePodState(pod2.address)
+
+        });
+        
+        it(' should update the Pod owed fees correctly & add fees to the Reserve (& emit correct Event)', async () => {
+
+            const prev_reserve = await manager.reserveAmount()
+            const prev_owed_fees = (await manager.pods(pod.address)).accruedFees
+
+            const tx = await pod.connect(podOwner).payFee(pay_fees_amount)
+
+            const new_reserve = await manager.reserveAmount()
+            const new_owed_fees = (await manager.pods(pod.address)).accruedFees
+
+            expect(new_owed_fees).to.be.eq(prev_owed_fees.sub(pay_fees_amount))
+            expect(new_reserve).to.be.eq(prev_reserve.add(pay_fees_amount))
+
+            await expect(tx).to.emit(manager, "PaidFees")
+            .withArgs(pod.address, pay_fees_amount);
+
+        });
+        
+        it(' should allow multiple Pods to notify', async () => {
+
+            const prev_reserve = await manager.reserveAmount()
+            const prev_owed_fees1 = (await manager.pods(pod.address)).accruedFees
+            const prev_owed_fees2 = (await manager.pods(pod2.address)).accruedFees
+
+            const tx = await pod.connect(podOwner).payFee(pay_fees_amount)
+
+            const new_reserve = await manager.reserveAmount()
+            const new_owed_fees1 = (await manager.pods(pod.address)).accruedFees
+
+            expect(new_owed_fees1).to.be.eq(prev_owed_fees1.sub(pay_fees_amount))
+            expect((await manager.pods(pod2.address)).accruedFees).to.be.eq(prev_owed_fees2)
+            expect(new_reserve).to.be.eq(prev_reserve.add(pay_fees_amount))
+
+            const tx2 = await pod2.connect(podOwner).payFee(pay_fees_amount2)
+
+            const new_owed_fees2 = (await manager.pods(pod2.address)).accruedFees
+
+            expect(new_owed_fees2).to.be.eq(prev_owed_fees2.sub(pay_fees_amount2))
+            expect((await manager.pods(pod.address)).accruedFees).to.be.eq(new_owed_fees1)
+            expect(await manager.reserveAmount()).to.be.eq(new_reserve.add(pay_fees_amount2))
+
+            await expect(tx).to.emit(manager, "PaidFees")
+            .withArgs(pod.address, pay_fees_amount);
+
+            await expect(tx2).to.emit(manager, "PaidFees")
+            .withArgs(pod2.address, pay_fees_amount2);
+
+        });
+        
+        it(' should only be callable by valid Pods', async () => {
+
+            await expect(
+                manager.connect(podOwner).notifyPayFee(ethers.utils.parseEther('12'))
+            ).to.be.revertedWith('CallerNotValidPod')
+
+        });
+
+    });
+
+    describe('notifyMintingFee', async () => {
+
+        const minting_fee = ethers.utils.parseEther('25')
+        
+        it(' should add the notified amount to the reserve correctly (& emit correct Event)', async () => {
+
+            const prev_reserve = await manager.reserveAmount()
+
+            const tx = await pod.connect(podOwner).payMintFee(minting_fee)
+
+            const new_reserve = await manager.reserveAmount()
+
+            expect(new_reserve).to.be.eq(prev_reserve.add(minting_fee))
+
+            await expect(tx).to.emit(manager, "MintingFees")
+            .withArgs(pod.address, minting_fee);
+
+        });
+        
+        it(' should allow multiple Pods to notify', async () => {
+
+            const minting_fee2 = ethers.utils.parseEther('13')
+            const minting_fee3 = ethers.utils.parseEther('110')
+
+            const start_reserve = await manager.reserveAmount()
+
+            const tx = await pod.connect(podOwner).payMintFee(minting_fee)
+
+            expect(await manager.reserveAmount()).to.be.eq(start_reserve.add(minting_fee))
+
+            const tx2 = await pod2.connect(podOwner).payMintFee(minting_fee2)
+
+            expect(await manager.reserveAmount()).to.be.eq(start_reserve.add(minting_fee.add(minting_fee2)))
+
+            const tx3 = await pod3.connect(podOwner).payMintFee(minting_fee3)
+
+            expect(await manager.reserveAmount()).to.be.eq(start_reserve.add(minting_fee.add(minting_fee2).add(minting_fee3)))
+
+            await expect(tx).to.emit(manager, "MintingFees")
+            .withArgs(pod.address, minting_fee);
+
+            await expect(tx2).to.emit(manager, "MintingFees")
+            .withArgs(pod2.address, minting_fee2);
+
+            await expect(tx3).to.emit(manager, "MintingFees")
+            .withArgs(pod3.address, minting_fee3);
+
+        });
+        
+        it(' should only be callable by valid Pods', async () => {
+
+            await expect(
+                manager.connect(podOwner).notifyMintingFee(ethers.utils.parseEther('12'))
+            ).to.be.revertedWith('CallerNotValidPod')
 
         });
 
