@@ -198,8 +198,9 @@ contract DullahanPod is ReentrancyGuard {
 
     function claimAaveExtraRewards(address receiver) external nonReentrant isInitialized onlyPodOwner {
         if(receiver == address(0)) revert Errors.AddressZero();
-        address[] memory assets = new address[](1);
+        address[] memory assets = new address[](2);
         assets[0] = aToken;
+        assets[1] = DullahanRegistry(registry).DEBT_GHO();
         // Claim any rewards accrued via the Aave Pool & send them directly to the given receiver
         IAaveRewardsController(DullahanRegistry(registry).AAVE_REWARD_COONTROLLER()).claimAllRewards(assets, receiver);
     }
