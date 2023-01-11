@@ -30,32 +30,49 @@ contract DullahanPod is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // Constants
+
+    /** @notice 1e18 scale */
     uint256 public constant UNIT = 1e18;
+    /** @notice Max value for BPS - 100% */
     uint256 public constant MAX_BPS = 10000;
+    /** @notice Max value possible for an uint256 */
     uint256 private constant MAX_UINT256 = 2**256 - 1;
 
+    /** @notice Minimum allowed amount of GHO to mint */
     uint256 public constant MIN_MINT_AMOUNT = 1e9;
 
     // Storage
+
+    /** @notice Is the Pod initialized */
     bool public initialized;
 
+    /** @notice Address of the Pod manager */
     address public manager;
+    /** @notice Address of the Vault */
     address public vault;
+    /** @notice Address of the Registry */
     address public registry;
 
+    /** @notice Address of the Pod owner */
     address public podOwner;
 
+    /** @notice Address of the delegate receiving the Pod voting power */
     address public delegate;
 
+    /** @notice Address of the collateral in the Pod */
     address public collateral;
+    /** @notice Address of the aToken for the collateral */
     address public aToken;
 
+    /** @notice Address of the AAVE token */
     address public aave;
+    /** @notice Address of the stkAAVE token */
     address public stkAave;
 
 
     // Events
 
+    /** @notice Event emitted when the Pod is initialized */
     event PodInitialized(
         address indexed podManager,
         address indexed collateral,
@@ -65,31 +82,42 @@ contract DullahanPod is ReentrancyGuard {
         address delegate
     );
 
+    /** @notice Event emitted when collateral is deposited */
     event CollateralDeposited(address indexed collateral, uint256 amount);
+    /** @notice Event emitted when collateral is withdrawn */
     event CollateralWithdrawn(address indexed collateral, uint256 amount);
+    /** @notice Event emitted when collateral is liquidated */
     event CollateralLiquidated(address indexed collateral, uint256 amount);
 
+    /** @notice Event emitted when GHO is minted */
     event GhoMinted(uint256 mintedAmount);
+    /** @notice Event emitted when GHO is repayed */
     event GhoRepayed(uint256 amountToRepay);
 
+    /** @notice Event emitted when stkAAVE is rented by the Pod */
     event RentedStkAave();
 
+    /** @notice Event emitted when the Pod delegate is updated */
     event UpdatedDelegate(address indexed oldDelegate, address indexed newDelegate);
+    /** @notice Event emitted when the Pod registry is updated */
     event UpdatedRegistry(address indexed oldRegistry, address indexed newRegistry);
 
 
     // Modifers
 
+    /** @notice Check that the caller is the Pod owner */
     modifier onlyPodOwner() {
         if(msg.sender != podOwner) revert Errors.NotPodOwner();
         _;
     }
 
+    /** @notice Check that the caller is the manager */
     modifier onlyManager() {
         if(msg.sender != manager) revert Errors.NotPodManager();
         _;
     }
 
+    /** @notice Check that the Pod is initialized */
     modifier isInitialized() {
         if(!initialized) revert Errors.NotInitialized();
         _;
@@ -107,6 +135,16 @@ contract DullahanPod is ReentrancyGuard {
         delegate = address(0xdEaD);
     }
 
+    /**
+    * @notice Initialize the Pod with the given parameters
+    * @param _manager Address of the Manager
+    * @param _vault Address of the Vault
+    * @param _registry Address of the Registry
+    * @param _podOwner Address of the Pod owner
+    * @param _collateral Address of the collateral
+    * @param _aToken Address of the aToken for the collateral
+    * @param _delegate Address of the delegate for the voting power
+    */
     function init(
         address _manager,
         address _vault,
@@ -156,14 +194,26 @@ contract DullahanPod is ReentrancyGuard {
 
     // View functions
 
+    /**
+    * @notice Get the Pod's current collateral balance
+    * @return uint256 : Current collateral balance
+    */
     function podCollateralBalance() external view returns(uint256) {
         return IERC20(aToken).balanceOf(address(this));
     }
 
+    /**
+    * @notice Get the Pod's current GHO debt balance
+    * @return uint256 : Current GHO debt balance
+    */
     function podDebtBalance() public view returns(uint256) {
         return IERC20(DullahanRegistry(registry).DEBT_GHO()).balanceOf(address(this));
     }
 
+    /**
+    * @notice Get the stored amount of fees owed by this Pod
+    * @return uint256 : Stored amount of fees owed
+    */
     function podOwedFees() external view returns(uint256) {
         return IDullahanPodManager(manager).podOwedFees(address(this));
     }
@@ -171,6 +221,11 @@ contract DullahanPod is ReentrancyGuard {
 
     // State-changing functions
 
+    /**
+    * @notice Deposit collateral
+    * @dev Pull collateral in the Pod to deposit it in the Aave Pool
+    * @param amount Amount to deposit
+    */
     function depositCollateral(uint256 amount) external nonReentrant isInitialized onlyPodOwner {
         if(amount == 0) revert Errors.NullAmount();
         if(!IDullahanPodManager(manager).updatePodState(address(this))) revert Errors.FailPodStateUpdate();
@@ -187,6 +242,11 @@ contract DullahanPod is ReentrancyGuard {
         emit CollateralDeposited(collateral, amount);
     }
 
+    /**
+    * @notice Withdraw collateral
+    * @param amount Amount to withdraw
+    * @param receiver Address to receive the collateral
+    */
     // Can give MAX_UINT256 to unstake full balance
     function withdrawCollateral(uint256 amount, address receiver) external nonReentrant isInitialized onlyPodOwner {
         if(amount == 0) revert Errors.NullAmount();
@@ -196,6 +256,10 @@ contract DullahanPod is ReentrancyGuard {
         _withdrawCollateral(amount, receiver);
     }
 
+    /**
+    * @notice Claim any existing rewards from the Aave Rewards Controller for this Pod
+    * @param receiver Address to receive the rewards
+    */
     function claimAaveExtraRewards(address receiver) external nonReentrant isInitialized onlyPodOwner {
         if(receiver == address(0)) revert Errors.AddressZero();
         address[] memory assets = new address[](2);
@@ -205,11 +269,21 @@ contract DullahanPod is ReentrancyGuard {
         IAaveRewardsController(DullahanRegistry(registry).AAVE_REWARD_COONTROLLER()).claimAllRewards(assets, receiver);
     }
 
+    /**
+    * @notice Claim Safety Module rewards & stake them in stkAAVE
+    */
     function compoundStkAave() external nonReentrant isInitialized {
         // Claim Aave Safety Module rewards for this Pod & stake them into stkAAVE directly
         _getStkAaveRewards();
     }
 
+    /**
+    * @notice Mint GHO & rent stkAAVE
+    * @dev Rent stkAAVE from the Vault & mint GHO with the best interest rate discount possible
+    * @param amountToMint Amount of GHO to be minted
+    * @param receiver Address to receive the minted GHO
+    * @return mintedAmount - uint256 : amount of GHO minted after fees
+    */
     function mintGho(uint256 amountToMint, address receiver) external nonReentrant isInitialized onlyPodOwner returns(uint256 mintedAmount) {
         if(amountToMint == 0) revert Errors.NullAmount();
         if(receiver == address(0)) revert Errors.AddressZero();
@@ -244,7 +318,11 @@ contract DullahanPod is ReentrancyGuard {
         emit GhoMinted(mintedAmount);
     }
 
-    // repay GHO -> always take the owed fees before, and then repay to Aave Market
+    /**
+    * @notice Repay GHO fees and debt
+    * @param amountToRepay Amount of GHO to de repaid
+    * @return bool : Success
+    */
     // Can give MAX_UINT256 to repay everything (needs max allowance)
     function repayGho(uint256 amountToRepay) external nonReentrant isInitialized onlyPodOwner returns(bool) {
         if(amountToRepay == 0) revert Errors.NullAmount();
@@ -253,6 +331,14 @@ contract DullahanPod is ReentrancyGuard {
         return _repayGho(amountToRepay);
     }
 
+    /**
+    * @notice Repay GHO fees and debt & withdraw collateral
+    * @dev Repay GHO fees & debt to be allowed to withdraw collateral
+    * @param repayAmount Amount of GHO to de repaid
+    * @param withdrawAmount Amount to withdraw
+    * @param receiver Address to receive the collateral
+    * @return bool : Success
+    */
     function repayGhoAndWithdrawCollateral(
         uint256 repayAmount,
         uint256 withdrawAmount,
@@ -270,6 +356,10 @@ contract DullahanPod is ReentrancyGuard {
         return repaySuccess;
     }
 
+    /**
+    * @notice Rent stkAAVE from the Vault to get the best interest rate reduction
+    * @return bool : Success
+    */
     function rentStkAave() external nonReentrant isInitialized onlyPodOwner returns(bool) {
         IDullahanPodManager _manager = IDullahanPodManager(manager);
         if(!_manager.updatePodState(address(this))) revert Errors.FailPodStateUpdate();
@@ -289,7 +379,12 @@ contract DullahanPod is ReentrancyGuard {
 
     // Manager only functions
 
-    // liquidate collateral -> only if this pod got liquidated, and fees are still owed to Dullahan
+    /**
+    * @notice Liquidate Pod collateral to repay owed fees
+    * @dev Liquidate Pod collateral to repay owed fees, in the case the this Pod got liquidated on Aave market, and fees are still owed to Dullahan
+    * @param amount Amount of collateral to liquidate
+    * @param receiver Address to receive the collateral
+    */
     function liquidateCollateral(uint256 amount, address receiver) external nonReentrant isInitialized onlyManager {
         if(amount == 0) return;
 
@@ -308,6 +403,10 @@ contract DullahanPod is ReentrancyGuard {
         emit CollateralLiquidated(collateral, amount);
     }
 
+    /**
+    * @notice Update the Pod's delegate address & delegate the voting power to it
+    * @param newDelegate Address of the new delegate
+    */
     function updateDelegation(address newDelegate) external isInitialized onlyManager {
         if(newDelegate == address(0)) revert Errors.AddressZero();
         if(newDelegate == delegate) revert Errors.SameAddress();
@@ -321,6 +420,10 @@ contract DullahanPod is ReentrancyGuard {
         emit UpdatedDelegate(oldDelegate, newDelegate);
     }
 
+    /**
+    * @notice Update the Pod's Registry address
+    * @param newRegistry Address of the new Registry
+    */
     function updateRegistry(address newRegistry) external isInitialized onlyManager {
         if(newRegistry == address(0)) revert Errors.AddressZero();
         if(newRegistry == registry) revert Errors.SameAddress();
@@ -334,6 +437,11 @@ contract DullahanPod is ReentrancyGuard {
 
     // Internal functions
 
+    /**
+    * @dev Withdraw collateral from the Aave Pool directly to the given receiver (only if Pod fees are fully repaid)
+    * @param amount Amount to withdraw
+    * @param receiver Address to receive the collateral
+    */
     function _withdrawCollateral(uint256 amount, address receiver) internal {
         // If given MAX_UINT256, we want to withdraw all the collateral
         if(amount == MAX_UINT256) amount = IERC20(aToken).balanceOf(address(this));
@@ -351,6 +459,11 @@ contract DullahanPod is ReentrancyGuard {
         emit CollateralWithdrawn(collateral, amount);
     }
     
+    /**
+    * @dev Repay GHO owed fees & debt (fees in priority)
+    * @param amountToRepay Amount of GHO to be repayed
+    * @return bool : Success
+    */
     function _repayGho(uint256 amountToRepay) internal returns(bool) {
         IDullahanPodManager _manager = IDullahanPodManager(manager);
 
@@ -402,6 +515,9 @@ contract DullahanPod is ReentrancyGuard {
         return true;
     }
 
+    /**
+    * @dev Claim AAVE rewards from the Safety Module & stake them to receive stkAAVE & notify the Manager
+    */
     function _getStkAaveRewards() internal {
         IStakedAave _stkAave = IStakedAave(stkAave);
 

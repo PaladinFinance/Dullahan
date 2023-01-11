@@ -20,23 +20,33 @@ contract DullahanRegistry is Owner {
 
     // Storage
 
+    /** @notice Address of the stkAAVE token */
     address public immutable STK_AAVE;
+    /** @notice Address of the AAVE token */
     address public immutable AAVE;
 
+    /** @notice Address of the GHO token */
     address public immutable GHO;
+    /** @notice Address of the GHO debt token */
     address public immutable DEBT_GHO;
 
+    /** @notice Address of the Aave v3 Pool */
     address public immutable AAVE_POOL_V3;
 
+    /** @notice Address of the Aave rewards controller */
     address public immutable AAVE_REWARD_COONTROLLER;
 
+    /** @notice Address of the Dullahan Vault */
     address public dullahanVault;
 
+    /** @notice Address of Dullahan Pod Managers */
     address[] public dullahanPodManagers;
 
     // Events
 
+    /** @notice Event emitted when the Vault is set */
     event SetVault(address indexed vault);
+    /** @notice Event emitted when a Manager is added */
     event AddPodManager(address indexed newManager);
 
 
@@ -69,6 +79,10 @@ contract DullahanRegistry is Owner {
         AAVE_REWARD_COONTROLLER = _aaveRewardController;
     }
 
+    /**
+    * @notice Set the Dullahan Vault
+    * @param vault address of the vault
+    */
     function setVault(address vault) external onlyOwner {
         if(vault == address(0)) revert Errors.AddressZero();
         if(dullahanVault != address(0)) revert Errors.VaultAlreadySet();
@@ -78,6 +92,10 @@ contract DullahanRegistry is Owner {
         emit SetVault(vault);
     }
 
+    /**
+    * @notice Add a Pod Manager
+    * @param manager Address of the new manager
+    */
     function addPodManager(address manager) external onlyOwner {
         if(manager == address(0)) revert Errors.AddressZero();
 
@@ -94,6 +112,10 @@ contract DullahanRegistry is Owner {
         emit AddPodManager(manager);
     }
 
+    /**
+    * @notice Get the list of Pod Managers
+    * @return address[] : List of Pod Managers
+    */
     function getPodManagers() external view returns(address[] memory) {
         return dullahanPodManagers;
     }

@@ -33,27 +33,41 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
 
     /** @notice 1e18 scale */
     uint256 private constant UNIT = 1e18;
-
-    uint256 private constant INITIAL_INDEX = 1e27;
-
-    uint256 private constant DISTRIBUTION_DURATION = 604800; // 1 week
-
+    /** @notice Max value for BPS - 100% */
     uint256 private constant MAX_BPS = 10000;
-
+    /** @notice Max value possible for an uint256 */
     uint256 private constant MAX_UINT256 = 2**256 - 1;
 
+    /** @notice Duration in second of a reward distribution */
+    uint256 private constant DISTRIBUTION_DURATION = 604800; // 1 week
+    /** @notice 1e27 - RAY - Initial Index for balance to scaled balance */
+    uint256 private constant INITIAL_INDEX = 1e27;
+    /** @notice Ratio of the total reward amount to be in the queue before moving it to distribution */
     uint256 private constant UPDATE_REWARD_RATIO = 8500; // 85 %
-
+    /** @notice Amount to deposit to seed the contract during initialization */
     uint256 private constant SEED_DEPOSIT = 0.001 ether;
 
 
     // Structs
 
+    /** @notice UserRewardState struct 
+    *   lastRewardPerToken: last update reward per token value
+    *   accruedRewards: total amount of rewards accrued
+    */
     struct UserRewardState { // to pack better - gas opti
         uint256 lastRewardPerToken;
         uint256 accruedRewards;
     }
 
+    /** @notice RewardState struct 
+    *   rewardPerToken: current reward per token value
+    *   lastUpdate: last state update timestamp 
+    *   ratePerSecond: current disitrbution rate per second
+    *   currentRewardAmount: current amount of rewards in the distribution
+    *   queuedRewardAmount: current amount of reward queued for the distribution
+    *   distributionEndTimestamp: timestamp of the end of the current distribution
+    *   userStates: users reward state for the reward token
+    */
     struct RewardState { // to pack better - gas opti
         uint256 rewardPerToken;
         uint256 lastUpdate;
@@ -85,29 +99,39 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
 
 
     // Storage
+
+    /** @notice Is the contract initialized */
     bool public initialized;
 
+    /** @notice Address of the Dullahan Vault */
     address public immutable vault;
 
+    /** @notice Total scaled deposited amount */
     uint256 public totalScaledAmount;
+    /** @notice User scaled deposits */
     mapping(address => uint256) public userScaledBalances;
 
+    /** @notice Address of tokens used in reward distributions */
     address[] public rewardList;
 
-    // reward token => reward state
+    /** @notice Reward state for each reward token */
     mapping(address => RewardState) public rewardStates;
 
+    /** @notice Addresses allowed to deposit rewards */
     mapping(address => bool) public rewardDepositors;
 
-    /** @notice Address allowed to claim for another user */
+    /** @notice Addresses allowed to claim for another user */
     mapping(address => address) public allowedClaimer;
 
 
     // Events
 
+    /** @notice Event emitted when the contract is initialized */
     event Initialized();
 
+    /** @notice Event emitted when staking */
     event Staked(address indexed caller, address indexed receiver, uint256 amount, uint256 scaledAmount);
+    /** @notice Event emitted when unstaking */
     event Unstaked(address indexed owner, address indexed receiver, uint256 amount, uint256 scaledAmount);
     
     /** @notice Event emitted when rewards are claimed */
@@ -116,6 +140,7 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
     /** @notice Event emitted when a new Claimer is set for an user */
     event SetUserAllowedClaimer(address indexed user, address indexed claimer);
 
+    /** @notice Event emitted when a new reward is added */
     event NewRewards(address indexed rewardToken, uint256 amount, uint256 endTimestamp);
 
     /** @notice Event emitted when a new reward depositor is added */
@@ -126,11 +151,13 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
 
     // Modifers
 
+    /** @notice Check that the caller is allowed to deposit rewards */
     modifier onlyRewardDepositors() {
         if(!rewardDepositors[msg.sender]) revert Errors.CallerNotAllowed();
         _;
     }
 
+    /** @notice Check that the contract is initalized */
     modifier isInitialized() {
         if (!initialized) revert Errors.NotInitialized();
         _;
@@ -161,6 +188,11 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
 
     // View functions
 
+    /**
+    * @notice Get the last update timestamp for a reward token
+    * @param reward Address of the reward token
+    * @return uint256 : Last update timestamp
+    */
     function lastRewardUpdateTimestamp(address reward) public view returns(uint256) {
         uint256 rewardEndTimestamp = rewardStates[reward].distributionEndTimestamp;
         // If the distribution is already over, return the timestamp of the end of distribution
@@ -168,30 +200,64 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         return block.timestamp > rewardEndTimestamp ? rewardEndTimestamp : block.timestamp;
     }
 
+    /**
+    * @notice Get the total amount of assets staked
+    * @return uint256 : Total amount of assets staked
+    */
     function totalAssets() public view returns(uint256) {
         return IScalingERC20(vault).balanceOf(address(this));
     }
 
+    /**
+    * @notice Get the current index to convert between balance and scaled balances
+    * @return uint256 : Current index
+    */
     function getCurrentIndex() external view returns(uint256) {
         return _getCurrentIndex();
     }
 
+    /**
+    * @notice Get the list of all reward tokens
+    * @return address[] : List of reward tokens
+    */
     function getRewardList() public view returns(address[] memory) {
         return rewardList;
     }
 
+    /**
+    * @notice Get the current amount staked by an user
+    * @param user Address of the user
+    * @return uint256 : Current amount staked
+    */
     function userCurrentStakedAmount(address user) public view returns(uint256) {
         return userScaledBalances[user].rayMul(_getCurrentIndex());
     }
 
+    /**
+    * @notice Get the current reward state of an user for a given reward token
+    * @param reward Address of the reward token
+    * @param user Address of the user
+    * @return UserRewardState : User reward state
+    */
     function getUserRewardState(address reward, address user) external view returns(UserRewardState memory) {
         return rewardStates[reward].userStates[user];
     }
 
+    /**
+    * @notice Get the current amount of rewards accrued by an user for a given reward token
+    * @param reward Address of the reward token
+    * @param user Address of the user
+    * @return uint256 : amount of rewards accured
+    */
     function getUserAccruedRewards(address reward, address user) external view returns(uint256) {
         return rewardStates[reward].userStates[user].accruedRewards + _getUserEarnedRewards(reward, user);
     }
 
+    /**
+    * @notice Get all current claimable amount of rewards for all reward tokens for a given user
+    * @param user Address of the user
+    * @return UserClaimableRewards[] : Amounts of rewards claimable by reward token
+    */
     function getUserTotalClaimableRewards(address user) external view returns(UserClaimableRewards[] memory){
         address[] memory rewards = rewardList;
         uint256 rewardsLength = rewards.length;
@@ -214,6 +280,12 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
     // State-changing functions
 
     // Can give MAX_UINT256 to stake full balance
+    /**
+    * @notice Stake Vault shares
+    * @param amount Amount to stake
+    * @param receiver Address of the address to stake for
+    * @return uint256 : scaled amount for the deposit 
+    */
     function stake(uint256 amount, address receiver) external nonReentrant isInitialized whenNotPaused returns(uint256) {
         if(amount == 0) revert Errors.NullAmount();
         if(receiver == address(0)) revert Errors.AddressZero();
@@ -221,6 +293,13 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         return _stake(msg.sender, amount, receiver);
     }
 
+    /**
+    * @dev Pull the ScalingERC20 token & stake in this contract & tracks the correct scaled amount
+    * @param receiver Address of the caller to pull token from
+    * @param amount Amount to stake
+    * @param receiver Address of the address to stake for
+    * @return uint256 : scaled amount for the deposit 
+    */
     function _stake(address caller, uint256 amount, address receiver) internal returns(uint256) {
         // We just want to update the reward states for the user who's balance gonna change
         _updateAllUserRewardStates(receiver);
@@ -246,6 +325,13 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
     }
 
     // Can give MAX_UINT256 to unstake full balance
+    /**
+    * @notice Unstake Vault shares
+    * @dev Unstake ScalingERC20 shares based on the given scaled amount & send them to the receiver
+    * @param scaledAmount Scaled amount ot unstake
+    * @param receiver Address to receive the shares
+    * @return uint256 : amount unstaked
+    */
     function unstake(uint256 scaledAmount, address receiver) external nonReentrant isInitialized returns(uint256) {
         if(scaledAmount == 0) revert Errors.NullScaledAmount();
         if(receiver == address(0)) revert Errors.AddressZero();
@@ -272,12 +358,25 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         return amount;
     }
 
+    /**
+    * @notice Claim the accrued rewards for a given reward token
+    * @param reward Address of the reward token
+    * @param receiver Address to receive the rewards
+    * @return uint256 : Amount of rewards claimed
+    */
     function claimRewards(address reward, address receiver) external nonReentrant isInitialized whenNotPaused returns(uint256) {
         if(receiver == address(0)) revert Errors.AddressZero();
 
         return _claimRewards(reward, msg.sender, receiver);
     }
 
+    /**
+    * @notice Claim the accrued rewards for a given reward token on behalf of a given user
+    * @param reward Address of the reward token
+    * @param user Address that accrued the rewards
+    * @param receiver Address to receive the rewards
+    * @return uint256 : Amount of rewards claimed
+    */
     function claimRewardsForUser(address reward, address user, address receiver) external nonReentrant isInitialized whenNotPaused returns(uint256) {
         if(receiver == address(0) || user == address(0)) revert Errors.AddressZero();
         if(msg.sender != allowedClaimer[user]) revert Errors.ClaimNotAllowed();
@@ -285,12 +384,23 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         return _claimRewards(reward, user, receiver);
     }
 
+    /**
+    * @notice Claim all accrued rewards for all reward tokens
+    * @param receiver Address to receive the rewards
+    * @return UserClaimedRewards[] : Amounts of reward claimed
+    */
     function claimAllRewards(address receiver) external nonReentrant isInitialized whenNotPaused returns(UserClaimedRewards[] memory) {
         if(receiver == address(0)) revert Errors.AddressZero();
 
         return _claimAllRewards(msg.sender, receiver);
     }
 
+    /**
+    * @notice Claim all accrued rewards for all reward tokens on behalf of a given user
+    * @param user Address that accrued the rewards
+    * @param receiver Address to receive the rewards
+    * @return UserClaimedRewards[] : Amounts of reward claimed
+    */
     function claimAllRewardsForUser(address user, address receiver) external nonReentrant isInitialized whenNotPaused returns(UserClaimedRewards[] memory) {
         if(receiver == address(0) || user == address(0)) revert Errors.AddressZero();
         if(msg.sender != allowedClaimer[user]) revert Errors.ClaimNotAllowed();
@@ -298,11 +408,18 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         return _claimAllRewards(user, receiver);
     }
 
+    /**
+    * @notice Update the reward state for a given reward token
+    * @param reward Address of the reward token
+    */
     function updateRewardState(address reward) external isInitialized whenNotPaused {
         if(reward == address(0)) revert Errors.AddressZero();
         _updateRewardState(reward);
     }
 
+    /**
+    * @notice Update the reward state for all reward tokens
+    */
     function updateAllRewardState() external isInitialized whenNotPaused {
         _updateAllRewardStates();
     }
@@ -310,6 +427,13 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
 
     // Reward Managers functions
 
+    /**
+    * @notice Add rewards to the disitribution queue
+    * @dev Set the amount of reward in the queue & push it to distribution if reaching the ratio
+    * @param rewardToken Address of the reward token
+    * @param amount Amount to queue
+    * @return bool : success
+    */
     function queueRewards(address rewardToken, uint256 amount) 
         external
         nonReentrant
@@ -361,6 +485,12 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         return true;
     }
 
+    /**
+    * @dev Update the disitrubtion parameters for a given reward token
+    * @param rewardToken Address of the reward token
+    * @param state State of the reward token
+    * @param rewardAmount Total amount ot distribute
+    */
     function _updateRewardDistribution(address rewardToken, RewardState storage state, uint256 rewardAmount) internal {
         // Calculate the remaining duration of the current distribution (if not already over)
         // to calculate the amount fo rewards not yet distributed, and add them to the new amount to distribute
@@ -382,11 +512,20 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
 
     // Internal functions
 
+    /**
+    * @dev Get the current index to convert between balance and scaled balances
+    * @return uint256 : Current index
+    */
     function _getCurrentIndex() internal view returns(uint256) {
         if(totalScaledAmount == 0) return INITIAL_INDEX;
         return totalAssets().rayDiv(totalScaledAmount);
     }
 
+    /**
+    * @dev Calculate the new rewardPerToken value for a reward token distribution
+    * @param reward Address of the reward token
+    * @return uint256 : new rewardPerToken value
+    */
     function _getNewRewardPerToken(address reward) internal view returns(uint256) {
         RewardState storage state = rewardStates[reward];
 
@@ -403,6 +542,12 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         );
     }
 
+    /**
+    * @dev Calculate the amount of rewards accrued by an user since last update for a reward token
+    * @param reward Address of the reward token
+    * @param user Address of the user
+    * @return uint256 : Accrued rewards amount for the user
+    */
     function _getUserEarnedRewards(address reward, address user) internal view returns(uint256) {
         UserRewardState storage userState = rewardStates[reward].userStates[user];
 
@@ -417,6 +562,10 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         return (userScaledBalance * (currentRewardPerToken - userState.lastRewardPerToken)) / UNIT;
     }
 
+    /**
+    * @dev Update the reward token distribution state
+    * @param reward Address of the reward token
+    */
     function _updateRewardState(address reward) internal {
         RewardState storage state = rewardStates[reward];
 
@@ -425,6 +574,11 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         state.lastUpdate = lastRewardUpdateTimestamp(reward);
     }
 
+    /**
+    * @dev Update the user reward state for a given reward token
+    * @param reward Address of the reward token
+    * @param user Address of the user
+    */
     function _updateUserRewardState(address reward, address user) internal {
         // Update the reward token state before the user's state
         _updateRewardState(reward);
@@ -436,6 +590,9 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         userState.lastRewardPerToken = rewardStates[reward].rewardPerToken;
     }
 
+    /**
+    * @dev Update the reward state for all the reward tokens
+    */
     function _updateAllRewardStates() internal {
         address[] memory _rewards = rewardList;
         uint256 length = _rewards.length;
@@ -448,6 +605,10 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         }
     }
 
+    /**
+    * @dev Update the reward state of the given user for all the reward tokens
+    * @param user Address of the user
+    */
     function _updateAllUserRewardStates(address user) internal {
         address[] memory _rewards = rewardList;
         uint256 length = _rewards.length;
@@ -547,6 +708,10 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         _unpause();
     }
 
+    /**
+    * @notice Add an address to the lsit of allowed reward depositors
+    * @param depositor Address to deposit rewards
+    */
     function addRewardDepositor(address depositor) external onlyOwner {
         if(depositor == address(0)) revert Errors.AddressZero();
         if(rewardDepositors[depositor]) revert Errors.AlreadyListedDepositor();
@@ -556,6 +721,10 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         emit AddedRewardDepositor(depositor);
     }
 
+    /**
+    * @notice Remove an address from the lsit of allowed reward depositors
+    * @param depositor Address to deposit rewards
+    */
     function removeRewardDepositor(address depositor) external onlyOwner {
         if(depositor == address(0)) revert Errors.AddressZero();
         if(!rewardDepositors[depositor]) revert Errors.NotListedDepositor();
@@ -565,6 +734,13 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         emit RemovedRewardDepositor(depositor);
     }
 
+    /**
+    * @notice aaa
+    * @dev aaa
+    * @param aa xx
+    * @param aa xx
+    * @return uint256 : aa
+    */
     /**
     * @notice Sets a given address as allowed to claim rewards for a given user
     * @dev Sets a given address as allowed to claim rewards for a given user

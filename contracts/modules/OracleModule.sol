@@ -22,11 +22,16 @@ import {Errors} from "../utils/Errors.sol";
 contract OracleModule is IOracleModule {
 
     // Constants
+
+    /** @notice 1e18 scale */
     uint256 public constant UNIT = 1e18;
     
+    /** @notice Number of decimals in the GHO token */
     uint256 public constant GHO_DECIMALS = 18;
 
+    /** @notice Address of the Aave Price Oracle */
     address public immutable AAVE_ORACLE;
+    /** @notice Address of the GHO token */
     address public immutable GHO;
 
 
@@ -42,6 +47,13 @@ contract OracleModule is IOracleModule {
 
     // Functions
 
+    /**
+    * @notice Get the amount of collateral for a given amount of fees
+    * @dev Calculates the amount of collateral matching the given amount of fees based on current prices
+    * @param collateral Address of the collateral
+    * @param feeAmount Amount of fees
+    * @return uint256 : Amount of collateral
+    */
     function getCollateralAmount(address collateral, uint256 feeAmount) external view returns(uint256) {
         uint256 collateralDecimals = IERC20Metadata(collateral).decimals();
 
@@ -60,6 +72,13 @@ contract OracleModule is IOracleModule {
 
     }
 
+    /**
+    * @notice Get the amount of fees for a given amount of collateral
+    * @dev Calculates the amount of fees matching the given amount of collateral based on current prices
+    * @param collateral Address of the collateral
+    * @param collateralAmount Amount of collateral
+    * @return uint256 : Amount of fees
+    */
     function getFeeAmount(address collateral, uint256 collateralAmount) external view returns(uint256) {
         uint256 collateralDecimals = IERC20Metadata(collateral).decimals();
 

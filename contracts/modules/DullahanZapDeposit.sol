@@ -28,17 +28,23 @@ contract DullahanZapDeposit is Owner, Pausable {
 
     // Storage
 
+    /** @notice Address of the AAVE token */
     address public immutable aave;
+    /** @notice Address of the stkAAVE token */
     address public immutable stkAave;
 
+    /** @notice Address of the Dullahan Vault */
     address public immutable vault;
+    /** @notice Address of the Dullahan Staking */
     address public immutable staking;
 
 
     // Events
 
+    /** @notice Event emitted when a Zap Depsoit is performed */
     event ZapDeposit(address indexed caller, address indexed receiver, address indexed sourceToken, uint256 amount, bool staked);
 
+    /** @notice Event emitted when an ERC20 token is recovered from this contract */
     event TokenRecovered(address indexed token, uint256 amount);
 
 
@@ -62,6 +68,14 @@ contract DullahanZapDeposit is Owner, Pausable {
 
     // User functions
 
+    /**
+    * @notice Zap deposit AAVE or stkAAVE into the Vault & stake them
+    * @dev Pull AAVE or stkAAVE, deposit in the Vault, and stake if flag was given
+    * @param sourceToken Address of the token to pull (AAVE or stkAAVE)
+    * @param amount Amount to deposit
+    * @param receiver Address to receive the share token / to be staked on behalf of
+    * @param stake Flag to stake the received shares
+    */
     function zapDeposit(address sourceToken, uint256 amount, address receiver, bool stake) external whenNotPaused {
         if(sourceToken == address(0) || receiver == address(0)) revert Errors.AddressZero();
         if(amount == 0) revert Errors.NullAmount();
