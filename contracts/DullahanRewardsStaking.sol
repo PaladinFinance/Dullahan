@@ -54,7 +54,7 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
     *   lastRewardPerToken: last update reward per token value
     *   accruedRewards: total amount of rewards accrued
     */
-    struct UserRewardState { // to pack better - gas opti
+    struct UserRewardState {
         uint256 lastRewardPerToken;
         uint256 accruedRewards;
     }
@@ -62,19 +62,19 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
     /** @notice RewardState struct 
     *   rewardPerToken: current reward per token value
     *   lastUpdate: last state update timestamp 
+    *   distributionEndTimestamp: timestamp of the end of the current distribution
     *   ratePerSecond: current disitrbution rate per second
     *   currentRewardAmount: current amount of rewards in the distribution
     *   queuedRewardAmount: current amount of reward queued for the distribution
-    *   distributionEndTimestamp: timestamp of the end of the current distribution
     *   userStates: users reward state for the reward token
     */
     struct RewardState { // to pack better - gas opti
         uint256 rewardPerToken;
-        uint256 lastUpdate;
+        uint128 lastUpdate;
+        uint128 distributionEndTimestamp;
         uint256 ratePerSecond;
         uint256 currentRewardAmount;
         uint256 queuedRewardAmount;
-        uint256 distributionEndTimestamp;
         // user address => user reward state
         mapping(address => UserRewardState) userStates;
     }
@@ -502,9 +502,9 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
         // & update the storage for the new distribution state
         state.ratePerSecond = rewardAmount / DISTRIBUTION_DURATION;
         state.currentRewardAmount = rewardAmount;
-        state.lastUpdate = block.timestamp;
+        state.lastUpdate = safe128(block.timestamp);
         uint256 distributionEnd = block.timestamp + DISTRIBUTION_DURATION;
-        state.distributionEndTimestamp = distributionEnd;
+        state.distributionEndTimestamp = safe128(distributionEnd);
 
         emit NewRewards(rewardToken, rewardAmount, distributionEnd);
     }
@@ -571,7 +571,7 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
 
         // Update the storage with the new reward state 
         state.rewardPerToken = _getNewRewardPerToken(reward);
-        state.lastUpdate = lastRewardUpdateTimestamp(reward);
+        state.lastUpdate = safe128(lastRewardUpdateTimestamp(reward));
     }
 
     /**

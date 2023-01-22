@@ -517,7 +517,7 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
     * @param pod Address of the Pod
     * @param amount Amount to pull
     */
-    function pullRentedStkAave(address pod, uint256 amount)external nonReentrant {
+    function pullRentedStkAave(address pod, uint256 amount) external nonReentrant {
         address manager = msg.sender;
         if(podManagers[manager].totalRented == 0) revert Errors.NotUndebtedManager();
         if(pod == address(0)) revert Errors.AddressZero();
@@ -816,20 +816,18 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
 
     /**
      * @notice Deposit token in the reserve
-     * @param from Address to pull the tokens from
      * @param amount Amount of token to deposit
      */
-    function depositToReserve(address from, uint256 amount) external onlyAllowed returns(bool) {
+    function depositToReserve(uint256 amount) external nonReentrant onlyAllowed returns(bool) {
         if(amount == 0) revert Errors.NullAmount();
-        if(from == address(0)) revert Errors.AddressZero();
 
         // Fetch Aave Safety Module rewards & stake them into stkAAVE
         _getStkAaveRewards();
 
         reserveAmount += amount;
-        IERC20(STK_AAVE).safeTransferFrom(from, address(this), amount);
+        IERC20(STK_AAVE).safeTransferFrom(msg.sender, address(this), amount);
 
-        emit ReserveDeposit(from, amount);
+        emit ReserveDeposit(msg.sender, amount);
 
         return true;
     }
@@ -839,7 +837,7 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
      * @param amount Amount of token to withdraw
      * @param receiver Address to receive the tokens
      */
-    function withdrawFromReserve(uint256 amount, address receiver) external onlyAllowed returns(bool) {
+    function withdrawFromReserve(uint256 amount, address receiver) external nonReentrant onlyAllowed returns(bool) {
         if(amount == 0) revert Errors.NullAmount();
         if(receiver == address(0)) revert Errors.AddressZero();
         if(amount > reserveAmount) revert Errors.ReserveTooLow();

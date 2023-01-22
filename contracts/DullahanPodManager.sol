@@ -44,19 +44,19 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     /** @notice Pod struct 
     *   podAddress: Address of the Pod contract
     *   podOwner: Address of the Pod owner
-    *   collateral: Address of the collaterla token
-    *   rentedAmount: Current total amount of stkAAVE rented to the Pod
-    *   lastIndex: Last updated index for the Pod state
+    *   collateral: Address of the collateral token
     *   lastUpdate: Last update timestamp for the Pod state
+    *   lastIndex: Last updated index for the Pod state
+    *   rentedAmount: Current total amount of stkAAVE rented to the Pod
     *   accruedFees: Current amount of fees owed by the Pod
     */
-    struct Pod { // To pack better - gas opti
+    struct Pod {
         address podAddress;
         address podOwner;
         address collateral;
-        uint256 rentedAmount;
+        uint96 lastUpdate;
         uint256 lastIndex;
-        uint256 lastUpdate;
+        uint256 rentedAmount;
         uint256 accruedFees;
     }
 
@@ -446,7 +446,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         }
 
         // Pull the GHO fees from the liquidator
-        IERC20(DullahanRegistry(registry).GHO()).transferFrom(liquidator, address(this), paidFees);
+        IERC20(DullahanRegistry(registry).GHO()).safeTransferFrom(liquidator, address(this), paidFees);
 
         // Reset owed fees for the Pod & add fees to Reserve
         _pod.accruedFees = 0;
@@ -662,7 +662,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         uint256 _lastUpdatedIndex = lastUpdatedIndex;
         uint256 _oldPodIndex = _pod.lastIndex;
         _pod.lastIndex = _lastUpdatedIndex;
-        _pod.lastUpdate = block.timestamp;
+        _pod.lastUpdate = safe96(block.timestamp);
 
         if(_pod.rentedAmount != 0 && _oldPodIndex != _lastUpdatedIndex){
             _pod.accruedFees += ((_lastUpdatedIndex - _oldPodIndex) * _pod.rentedAmount) / UNIT;
@@ -830,6 +830,14 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         extraLiquidationRatio = newRatio;
 
         emit ExtraLiquidationRatioUpdated(oldRatio, newRatio);
+    }
+
+
+    // Maths
+
+    function safe96(uint256 n) internal pure returns (uint96) {
+        if(n > type(uint96).max) revert Errors.NumberExceed96Bits();
+        return uint96(n);
     }
 
 }

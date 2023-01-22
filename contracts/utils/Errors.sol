@@ -36,6 +36,7 @@ library Errors {
     error ERC20_AmountExceedBalance();
 
     // Maths Errors
+    error NumberExceed96Bits();
     error NumberExceed128Bits();
     error NumberExceed248Bits();
 

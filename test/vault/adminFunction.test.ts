@@ -603,7 +603,7 @@ describe('DullahanVault contract tests - Admin functions', () => {
             const prev_balance = await stkAave.balanceOf(vault.address)
             const prev_reserve = await vault.reserveAmount()
 
-            const tx = await vault.connect(admin).depositToReserve(admin.address, reserve_deposit)
+            const tx = await vault.connect(admin).depositToReserve(reserve_deposit)
 
             // Part stkAave reward claim & re-stake
             const receipt = await tx.wait()
@@ -628,23 +628,15 @@ describe('DullahanVault contract tests - Admin functions', () => {
         it(' should fail if given a null amount', async () => {
 
             await expect(
-                vault.connect(admin).depositToReserve(admin.address, 0)
+                vault.connect(admin).depositToReserve(0)
             ).to.be.revertedWith('NullAmount')
-
-        });
-
-        it(' should fail if given address 0x0', async () => {
-
-            await expect(
-                vault.connect(admin).depositToReserve(ethers.constants.AddressZero, reserve_deposit)
-            ).to.be.revertedWith('AddressZero')
 
         });
 
         it(' should block non-admin caller', async () => {
 
             await expect(
-                vault.connect(depositor1).depositToReserve(admin.address, reserve_deposit)
+                vault.connect(depositor1).depositToReserve(reserve_deposit)
             ).to.be.revertedWith('CallerNotAdmin')
 
         });

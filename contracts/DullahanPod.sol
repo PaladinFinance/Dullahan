@@ -398,7 +398,7 @@ contract DullahanPod is ReentrancyGuard {
         }
 
         // Send the tokens to the liquidator (here the given receiver)
-        IERC20(collateral).transfer(receiver, amount);
+        IERC20(collateral).safeTransfer(receiver, amount);
 
         emit CollateralLiquidated(collateral, amount);
     }
