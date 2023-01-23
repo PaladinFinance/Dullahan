@@ -7,6 +7,7 @@ import "@nomiclabs/hardhat-etherscan";
 import "solidity-coverage";
 import "hardhat-gas-reporter";
 import "@nomiclabs/hardhat-vyper";
+import "solidity-docgen";
 
 require("dotenv").config();
 
@@ -66,6 +67,16 @@ const config: HardhatUserConfig = {
   },
   gasReporter: {
     enabled: true
+  },
+  docgen: {
+    outputDir: 'docs',
+    pages: 'files',
+    exclude: [
+      './interfaces',
+      './oz',
+      './test',
+      './utils'
+    ]
   }
 };
 
