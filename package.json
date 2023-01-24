@@ -11,7 +11,7 @@
     "coverage": "npx hardhat coverage --network hardhat --solcoverjs .solcover.js",
     "deploy": "npx hardhat run --network mainnet",
     "setup-foundry": "foundryup && forge install",
-    "test-fuzz": "forge test -vv",
+    "test-fuzz": "export $(cat .env | xargs) && forge test --fork-url $MAINNET_URI --fork-block-number 16076533 -vv",
     "docgen": "npx hardhat docgen"
   },
   "author": "",

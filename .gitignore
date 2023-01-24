@@ -6,6 +6,7 @@ build/
 types/
 cache/
 artifacts/
+out/
 typechain/
 flatten/
 bin/
