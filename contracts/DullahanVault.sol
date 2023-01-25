@@ -123,8 +123,10 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
     event UpdatedVotingPowerManager(address indexed oldManager, address indexed newManager);
     /** @notice Event emitted when the Reserve manager is updated */
     event UpdatedReserveManager(address indexed oldManager, address indexed newManager);
-    /** @notice Event emitted when Buffer ratio is updated */
+    /** @notice Event emitted when the Buffer ratio is updated */
     event UpdatedBufferRatio(uint256 oldRatio, uint256 newRatio);
+    /** @notice Event emitted when the Reserve ratio is updated */
+    event UpdatedReserveRatio(uint256 oldRatio, uint256 newRatio);
 
     /** @notice Event emitted when an ERC20 token is recovered */
     event TokenRecovered(address indexed token, uint256 amount);
@@ -799,6 +801,19 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         reserveManager = newManager;
 
         emit UpdatedReserveManager(oldManager, newManager);
+    }
+
+    /**
+    * @notice Uodate the reserve ratio parameter
+    * @param newRatio New ratio value
+    */
+    function updateReserveRatio(uint256 newRatio) external onlyAdmin {
+        if(newRatio > 1500) revert Errors.InvalidParameter();
+
+        uint256 oldRatio = reserveRatio;
+        reserveRatio = newRatio;
+
+        emit UpdatedReserveRatio(oldRatio, newRatio);
     }
 
     /**
