@@ -17,14 +17,14 @@ import {
 
 require("dotenv").config();
 
-export async function resetFork() {
+export async function resetFork(blockNumber: number = 16076533) {
     await hre.network.provider.request({
         method: "hardhat_reset",
         params: [
           {
             forking: {
                 jsonRpcUrl: "https://eth-mainnet.alchemyapi.io/v2/" + (process.env.ALCHEMY_API_KEY || ''),
-                blockNumber: 16076533
+                blockNumber: blockNumber
             },
           },
         ],
