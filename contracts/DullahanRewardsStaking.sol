@@ -250,7 +250,7 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
     * @return uint256 : amount of rewards accured
     */
     function getUserAccruedRewards(address reward, address user) external view returns(uint256) {
-        return rewardStates[reward].userStates[user].accruedRewards + _getUserEarnedRewards(reward, user);
+        return rewardStates[reward].userStates[user].accruedRewards + _getUserEarnedRewards(reward, user, _getNewRewardPerToken(reward));
     }
 
     /**
@@ -268,7 +268,7 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
             // Add the reward token to the list
             rewardAmounts[i].reward = rewards[i];
             // And add the calculated claimable amount of the given reward
-            rewardAmounts[i].claimableAmount = rewardStates[rewards[i]].userStates[user].accruedRewards + _getUserEarnedRewards(rewards[i], user);
+            rewardAmounts[i].claimableAmount = rewardStates[rewards[i]].userStates[user].accruedRewards + _getUserEarnedRewards(rewards[i], user, _getNewRewardPerToken(rewards[i]));
 
             unchecked { ++i; }
         }
@@ -548,11 +548,10 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
     * @param user Address of the user
     * @return uint256 : Accrued rewards amount for the user
     */
-    function _getUserEarnedRewards(address reward, address user) internal view returns(uint256) {
+    function _getUserEarnedRewards(address reward, address user, uint256 currentRewardPerToken) internal view returns(uint256) {
         UserRewardState storage userState = rewardStates[reward].userStates[user];
 
-        // Get the new rewardPerToken for the reward token, and the user scaled balance
-        uint256 currentRewardPerToken = _getNewRewardPerToken(reward);
+        // Get the user scaled balance
         uint256 userScaledBalance = userScaledBalances[user];
 
         if(userScaledBalance == 0) return 0;
@@ -585,9 +584,10 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
 
         UserRewardState storage userState = rewardStates[reward].userStates[user];
 
-        // Update the storage with the new reward state 
-        userState.accruedRewards += _getUserEarnedRewards(reward, user);
-        userState.lastRewardPerToken = rewardStates[reward].rewardPerToken;
+        // Update the storage with the new reward state
+        uint256 currentRewardPerToken = rewardStates[reward].rewardPerToken;
+        userState.accruedRewards += _getUserEarnedRewards(reward, user, currentRewardPerToken);
+        userState.lastRewardPerToken = currentRewardPerToken;
     }
 
     /**
