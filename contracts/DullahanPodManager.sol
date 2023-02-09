@@ -21,6 +21,7 @@ import "./modules/DullahanRegistry.sol";
 import "./interfaces/IDullahanRewardsStaking.sol";
 import "./interfaces/IFeeModule.sol";
 import "./interfaces/IOracleModule.sol";
+import "./interfaces/IDiscountCalculator.sol";
 import {Errors} from "./utils/Errors.sol";
 
 /** @title DullahanPodManager contract
@@ -91,6 +92,8 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     address public feeModule;
     /** @notice Address of the Oracle Module */
     address public oracleModule;
+    /** @notice Address of the Discount Calculator Module */
+    address public discountCalculator;
 
     /** @notice Address of the Chest to receive fees */
     address public protocolFeeChest;
@@ -105,7 +108,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     /** @notice Ratio of minted amount taken as minting fees */
     uint256 public mintFeeRatio = 50; // BPS: 0.5%
     /** @notice Ratio of renting fees taken as protocol fees */
-    uint256 public protocolFeeRatio = 500; // BPS: 5%
+    uint256 public protocolFeeRatio = 1000; // BPS: 10%
 
     /** @notice Total amount set as reserve (holding Vault renting fees) */
     uint256 public reserveAmount;
@@ -147,6 +150,8 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     event FeeModuleUpdated(address indexed oldMoldule, address indexed newModule);
     /** @notice Event emitted when the Oracle Module is updated */
     event OracleModuleUpdated(address indexed oldMoldule, address indexed newModule);
+    /** @notice Event emitted when the Discount Calculator Module is updated */
+    event DiscountCalculatorUpdated(address indexed oldCalculator, address indexed newCalculator);
 
     /** @notice Event emitted when the Mint Fee Ratio is updated */
     event MintFeeRatioUpdated(uint256 oldRatio, uint256 newRatio);
@@ -174,7 +179,8 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         address _podImplementation,
         address _registry,
         address _feeModule,
-        address _oracleModule
+        address _oracleModule,
+        address _discountCalculator
     ) {
         if(
             _vault == address(0)
@@ -184,6 +190,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
             || _registry == address(0)
             || _feeModule == address(0)
             || _oracleModule == address(0)
+            || _discountCalculator == address(0)
         ) revert Errors.AddressZero();
 
         vault = _vault;
@@ -193,6 +200,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         registry = _registry;
         feeModule = _feeModule;
         oracleModule = _oracleModule;
+        discountCalculator = _discountCalculator;
 
         lastUpdatedIndex = block.timestamp;
     }
@@ -608,13 +616,9 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     * @param addedDebtAmount Amount of GHO to be minted
     * @return uint256 : Amount of stkAAVE needed
     */
-    function _calculatedNeededStkAave(address pod, uint256 addedDebtAmount) internal returns(uint256) {
-        // !!!!!!!!!!!!!!!!!!!!!!!!!
-        // !!!!!!!!!!!!!!!!!!!!!!!!!
-        // !!!    To Change      !!!
-        // !!!!!!!!!!!!!!!!!!!!!!!!!
+    function _calculatedNeededStkAave(address pod, uint256 addedDebtAmount) internal view returns(uint256) {
         uint256 totalDebtBalance = IERC20(DullahanRegistry(registry).DEBT_GHO()).balanceOf(pod) + addedDebtAmount;
-        return (totalDebtBalance * UNIT) / (50 ether);
+        return IDiscountCalculator(discountCalculator).calculateAmountForMaxDiscount(totalDebtBalance);
     }
 
     /**
@@ -791,6 +795,20 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         oracleModule = newModule;
 
         emit OracleModuleUpdated(oldMoldule, newModule);
+    }
+
+    /**
+    * @notice Uodate the Discount Calculator Module
+    * @param newCalculator Address of the new Calculator
+    */
+    function updateDiscountCalculator(address newCalculator) external onlyOwner {
+        if(newCalculator == address(0)) revert Errors.AddressZero();
+        if(newCalculator == discountCalculator) revert Errors.SameAddress();
+
+        address oldCalculator = discountCalculator;
+        discountCalculator = newCalculator;
+
+        emit DiscountCalculatorUpdated(oldCalculator, newCalculator);
     }
 
     /**
