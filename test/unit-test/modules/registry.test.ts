@@ -2,13 +2,13 @@ const hre = require("hardhat");
 import { ethers } from "hardhat";
 import chai from "chai";
 import { solidity } from "ethereum-waffle";
-import { DullahanRegistry } from "../../typechain/modules/DullahanRegistry";
+import { DullahanRegistry } from "../../../typechain/modules/DullahanRegistry";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ContractFactory } from "@ethersproject/contracts";
 
 import {
     resetFork
-} from "../utils/utils";
+} from "../../utils/utils";
 
 chai.use(solidity);
 const { expect } = chai;

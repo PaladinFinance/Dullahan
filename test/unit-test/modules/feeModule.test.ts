@@ -3,14 +3,14 @@ import { ethers } from "hardhat";
 import chai from "chai";
 import { solidity } from "ethereum-waffle";
 import { BigNumber } from "ethers";
-import { DullahanFeeModule } from "../../typechain/modules/DullahanFeeModule";
-import { MockVault } from "../../typechain/test/MockVault";
+import { DullahanFeeModule } from "../../../typechain/modules/DullahanFeeModule";
+import { MockVault } from "../../../typechain/test/MockVault";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ContractFactory } from "@ethersproject/contracts";
 
 import {
     resetFork
-} from "../utils/utils";
+} from "../../utils/utils";
 
 chai.use(solidity);
 const { expect } = chai;

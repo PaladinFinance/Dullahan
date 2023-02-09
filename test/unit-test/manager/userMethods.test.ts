@@ -3,22 +3,23 @@ import { ethers } from "hardhat";
 import chai from "chai";
 import { BigNumber } from "ethers";
 import { solidity } from "ethereum-waffle";
-import { DullahanPodManager } from "../../typechain/DullahanPodManager";
-import { MockERC20 } from "../../typechain/test/MockERC20";
-import { MockPod } from "../../typechain/test/MockPod";
-import { MockMarket } from "../../typechain/test/MockMarket";
-import { MockRewards } from "../../typechain/test/MockRewards";
-import { MockStakingRewards } from "../../typechain/test/MockStakingRewards";
-import { MockOracle } from "../../typechain/test/MockOracle";
-import { MockFeeModule } from "../../typechain/test/MockFeeModule";
-import { MockVault2 } from "../../typechain/test/MockVault2";
-import { DullahanRegistry } from "../../typechain/modules/DullahanRegistry";
-import { OracleModule } from "../../typechain/modules/OracleModule";
-import { MockPod__factory } from "../../typechain/factories/test/MockPod__factory";
-import { IERC20 } from "../../typechain/oz/interfaces/IERC20";
-import { IERC20__factory } from "../../typechain/factories/oz/interfaces/IERC20__factory";
-import { IStakedAave } from "../../typechain/interfaces/IStakedAave";
-import { IStakedAave__factory } from "../../typechain/factories/interfaces/IStakedAave__factory";
+import { DullahanPodManager } from "../../../typechain/DullahanPodManager";
+import { MockERC20 } from "../../../typechain/test/MockERC20";
+import { MockPod } from "../../../typechain/test/MockPod";
+import { MockMarket } from "../../../typechain/test/MockMarket";
+import { MockRewards } from "../../../typechain/test/MockRewards";
+import { MockStakingRewards } from "../../../typechain/test/MockStakingRewards";
+import { MockOracle } from "../../../typechain/test/MockOracle";
+import { MockFeeModule } from "../../../typechain/test/MockFeeModule";
+import { MockCalculator } from "../../../typechain/test/MockCalculator";
+import { MockVault2 } from "../../../typechain/test/MockVault2";
+import { DullahanRegistry } from "../../../typechain/modules/DullahanRegistry";
+import { OracleModule } from "../../../typechain/modules/OracleModule";
+import { MockPod__factory } from "../../../typechain/factories/test/MockPod__factory";
+import { IERC20 } from "../../../typechain/oz/interfaces/IERC20";
+import { IERC20__factory } from "../../../typechain/factories/oz/interfaces/IERC20__factory";
+import { IStakedAave } from "../../../typechain/interfaces/IStakedAave";
+import { IStakedAave__factory } from "../../../typechain/factories/interfaces/IStakedAave__factory";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ContractFactory } from "@ethersproject/contracts";
 
@@ -26,7 +27,7 @@ import {
     getERC20,
     advanceTime,
     resetFork
-} from "../utils/utils";
+} from "../../utils/utils";
 
 import {
     AAVE,
@@ -35,7 +36,7 @@ import {
     AMOUNT_AAVE,
     REWARD_TOKEN_1,
     REWARD_TOKEN_2,
-} from "../utils/constants"
+} from "../../utils/constants"
 
 chai.use(solidity);
 const { expect } = chai;
@@ -52,6 +53,7 @@ let oracleFactory: ContractFactory
 let feeModuleFactory: ContractFactory
 let stakingFactory: ContractFactory
 let oracleModuleFactory: ContractFactory
+let calculatorModuleFactory: ContractFactory
 
 const UNIT = ethers.utils.parseEther('1')
 const MAX_BPS = BigNumber.from('10000')
@@ -79,6 +81,7 @@ describe('DullahanPodManager contract tests - user functions', () => {
     let oracle: MockOracle
     let feeModule: MockFeeModule
     let oracleModule: OracleModule
+    let calculatorModule: MockCalculator
 
     let feeChest: SignerWithAddress
 
@@ -117,6 +120,7 @@ describe('DullahanPodManager contract tests - user functions', () => {
         feeModuleFactory = await ethers.getContractFactory("MockFeeModule");
         stakingFactory = await ethers.getContractFactory("MockStakingRewards");
         oracleModuleFactory = await ethers.getContractFactory("OracleModule");
+        calculatorModuleFactory = await ethers.getContractFactory("MockCalculator");
 
         aave = IERC20__factory.connect(AAVE, provider);
         stkAave = IERC20__factory.connect(STK_AAVE, provider);
@@ -149,6 +153,8 @@ describe('DullahanPodManager contract tests - user functions', () => {
         await oracle.deployed();
         feeModule = (await feeModuleFactory.connect(admin).deploy()) as MockFeeModule;
         await feeModule.deployed();
+        calculatorModule = (await calculatorModuleFactory.connect(admin).deploy()) as MockCalculator;
+        await calculatorModule.deployed();
         oracleModule = (await oracleModuleFactory.connect(admin).deploy(
             oracle.address,
             gho.address
@@ -196,7 +202,8 @@ describe('DullahanPodManager contract tests - user functions', () => {
             podImpl.address,
             registry.address,
             feeModule.address,
-            oracleModule.address
+            oracleModule.address,
+            calculatorModule.address
         )) as DullahanPodManager;
         await manager.deployed();
 
@@ -223,10 +230,11 @@ describe('DullahanPodManager contract tests - user functions', () => {
         expect(await manager.registry()).to.be.eq(registry.address)
         expect(await manager.feeModule()).to.be.eq(feeModule.address)
         expect(await manager.oracleModule()).to.be.eq(oracleModule.address)
+        expect(await manager.discountCalculator()).to.be.eq(calculatorModule.address)
 
         expect(await manager.extraLiquidationRatio()).to.be.eq(500)
         expect(await manager.mintFeeRatio()).to.be.eq(50)
-        expect(await manager.protocolFeeRatio()).to.be.eq(500)
+        expect(await manager.protocolFeeRatio()).to.be.eq(1000)
 
     });
 

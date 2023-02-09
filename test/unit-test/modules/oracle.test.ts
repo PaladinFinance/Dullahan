@@ -3,16 +3,16 @@ import { ethers } from "hardhat";
 import chai from "chai";
 import { solidity } from "ethereum-waffle";
 import { BigNumber } from "ethers";
-import { OracleModule } from "../../typechain/modules/OracleModule";
-import { MockOracle } from "../../typechain/test/MockOracle";
-import { IERC20 } from "../../typechain/oz/interfaces/IERC20";
-import { IERC20__factory } from "../../typechain/factories/oz/interfaces/IERC20__factory";
+import { OracleModule } from "../../../typechain/modules/OracleModule";
+import { MockOracle } from "../../../typechain/test/MockOracle";
+import { IERC20 } from "../../../typechain/oz/interfaces/IERC20";
+import { IERC20__factory } from "../../../typechain/factories/oz/interfaces/IERC20__factory";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ContractFactory } from "@ethersproject/contracts";
 
 import {
     resetFork
-} from "../utils/utils";
+} from "../../utils/utils";
 
 const TOKEN_1 = "0x6B175474E89094C44Da98b954EedeAC495271d0F"; //here : DAI
 const TOKEN_2 = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"; //here : WETH

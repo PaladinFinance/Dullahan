@@ -29,10 +29,10 @@ max_interest_rate_discount = Decimal(0.20)
 
 # from Dullahan
 vault_TVL = Decimal(80_000)
-renting_fee_yearly = Decimal(0.1)
+renting_fee_yearly = Decimal(0.085)
 renting_fee_per_sec = renting_fee_yearly / year
 
-extra_multiplier_per_bps = Decimal(4) # => so 100% => multiplier is x2
+extra_multiplier_per_bps = Decimal(6) # => so 100% => multiplier is x2
 
 # prices
 stkAave_price = Decimal(86.33)
@@ -82,18 +82,20 @@ while(current_utilization <= vault_TVL):
         print()
 
     yearly_rate = current_rate * year
-    yearly_renting_rate = yearly_rate / GHO_per_stkAAVE # double check that one
+    yearly_renting_rate = yearly_rate / GHO_per_stkAAVE # si yearly_rate=> 0.085 => 0.00085 GHO/GHO debt à l'année
     print(yearly_rate)
     print(yearly_renting_rate)
     print()
 
     # get total year reward based on rented stkAave amount
-    total_GHO_earned = yearly_rate * utilization_steps
+    total_GHO_earned = yearly_rate * current_utilization
     total_GHO_earned_without_fees = total_GHO_earned - (total_GHO_earned * fee)
+    total_GHO_fees = total_GHO_earned * fee
     GHO_earned_per_deposited_stkAave = total_GHO_earned_without_fees / vault_TVL
     dstkAave_APR = (GHO_earned_per_deposited_stkAave * GHO_price) / stkAave_price
     print(total_GHO_earned)
     print(total_GHO_earned_without_fees)
+    print(total_GHO_fees)
     print(GHO_earned_per_deposited_stkAave)
     print(dstkAave_APR)
     print()
@@ -145,14 +147,14 @@ for row, subfig in enumerate(subfigs):
     
     axs[0].plot(utilization_rates, yearly_renting_rates, color='violet')
     axs[0].set_title('Yearly Renting Rates', y=1.0, pad=-14)
-    axs[0].set_ylim(0, 5)
+    axs[0].set_ylim(0, 1)
     
     axs[1].plot(utilization_rates, vanilla_rates, color='red', label="Vanilla Borrow Rate")
     axs[1].plot(utilization_rates, discounted_rates, color='green', label="Discounted Borrow rate")
     axs[1].plot(utilization_rates, total_rates, color='blue', label="Dullahan Borrow rate")
     axs[1].legend(loc=4, prop={'size': 6})
     axs[1].set_title('Yearly GHO Borrorw Rates', y=1.0, pad=-14)
-    axs[1].set_ylim(0, 5)
+    axs[1].set_ylim(1, 2.5)
     
     axs[2].plot(utilization_rates, dstkAave_APRs, color='orange')
     axs[2].set_title('dstkAave holders APR', y=1.0, pad=-14)

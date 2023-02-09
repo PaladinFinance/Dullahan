@@ -32,6 +32,21 @@ export async function resetFork() {
 
 }
 
+export async function resetForkGoerli() {
+    await hre.network.provider.request({
+        method: "hardhat_reset",
+        params: [
+          {
+            forking: {
+                jsonRpcUrl: "https://eth-goerli.g.alchemy.com/v2/" + (process.env.ALCHEMY_GOERLI_API_KEY || ''),
+                blockNumber: 8463485
+            },
+          },
+        ],
+    });
+
+}
+
 export async function getStkAave(
     admin: SignerWithAddress,
     recipient: SignerWithAddress

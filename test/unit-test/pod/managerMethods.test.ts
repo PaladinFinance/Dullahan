@@ -3,20 +3,20 @@ import { ethers } from "hardhat";
 import chai from "chai";
 import { BigNumber } from "ethers";
 import { solidity } from "ethereum-waffle";
-import { DullahanPod } from "../../typechain/DullahanPod";
-import { DullahanPod__factory } from "../../typechain/factories/DullahanPod__factory";
-import { MockERC20 } from "../../typechain/test/MockERC20";
-import { MockManager } from "../../typechain/test/MockManager";
-import { MockMarket } from "../../typechain/test/MockMarket";
-import { MockRewards } from "../../typechain/test/MockRewards";
-import { MockVault2 } from "../../typechain/test/MockVault2";
-import { DullahanRegistry } from "../../typechain/modules/DullahanRegistry";
-import { IERC20 } from "../../typechain/oz/interfaces/IERC20";
-import { IERC20__factory } from "../../typechain/factories/oz/interfaces/IERC20__factory";
-import { IStakedAave } from "../../typechain/interfaces/IStakedAave";
-import { IStakedAave__factory } from "../../typechain/factories/interfaces/IStakedAave__factory";
-import { IGovernancePowerDelegationToken } from "../../typechain/interfaces/IGovernancePowerDelegationToken";
-import { IGovernancePowerDelegationToken__factory } from "../../typechain/factories/interfaces/IGovernancePowerDelegationToken__factory";
+import { DullahanPod } from "../../../typechain/DullahanPod";
+import { DullahanPod__factory } from "../../../typechain/factories/DullahanPod__factory";
+import { MockERC20 } from "../../../typechain/test/MockERC20";
+import { MockManager } from "../../../typechain/test/MockManager";
+import { MockMarket } from "../../../typechain/test/MockMarket";
+import { MockRewards } from "../../../typechain/test/MockRewards";
+import { MockVault2 } from "../../../typechain/test/MockVault2";
+import { DullahanRegistry } from "../../../typechain/modules/DullahanRegistry";
+import { IERC20 } from "../../../typechain/oz/interfaces/IERC20";
+import { IERC20__factory } from "../../../typechain/factories/oz/interfaces/IERC20__factory";
+import { IStakedAave } from "../../../typechain/interfaces/IStakedAave";
+import { IStakedAave__factory } from "../../../typechain/factories/interfaces/IStakedAave__factory";
+import { IGovernancePowerDelegationToken } from "../../../typechain/interfaces/IGovernancePowerDelegationToken";
+import { IGovernancePowerDelegationToken__factory } from "../../../typechain/factories/interfaces/IGovernancePowerDelegationToken__factory";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ContractFactory } from "@ethersproject/contracts";
 
@@ -24,7 +24,7 @@ import {
     getERC20,
     advanceTime,
     resetFork
-} from "../utils/utils";
+} from "../../utils/utils";
 
 import {
     AAVE,
@@ -37,7 +37,7 @@ import {
     REWARD_TOKEN_2,
     HOLDER_REWARD_2,
     AMOUNT_REWARD_2,
-} from "../utils/constants"
+} from "../../utils/constants"
 
 chai.use(solidity);
 const { expect } = chai;
