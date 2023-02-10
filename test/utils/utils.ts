@@ -7,7 +7,7 @@ import { IStakedAave__factory } from "../../typechain/factories/interfaces/IStak
 
 const { provider } = ethers;
 
-import { 
+import {
     AAVE,
     STK_AAVE,
     HOLDER_AAVE,
@@ -21,12 +21,12 @@ export async function resetFork() {
     await hre.network.provider.request({
         method: "hardhat_reset",
         params: [
-          {
-            forking: {
-                jsonRpcUrl: "https://eth-mainnet.alchemyapi.io/v2/" + (process.env.ALCHEMY_API_KEY || ''),
-                blockNumber: 16076533
+            {
+                forking: {
+                    jsonRpcUrl: "https://eth-mainnet.alchemyapi.io/v2/" + (process.env.ALCHEMY_API_KEY || ''),
+                    blockNumber: 16076533
+                },
             },
-          },
         ],
     });
 
@@ -36,12 +36,12 @@ export async function resetForkGoerli() {
     await hre.network.provider.request({
         method: "hardhat_reset",
         params: [
-          {
-            forking: {
-                jsonRpcUrl: "https://eth-goerli.g.alchemy.com/v2/" + (process.env.ALCHEMY_GOERLI_API_KEY || ''),
-                blockNumber: 8463485
+            {
+                forking: {
+                    jsonRpcUrl: "https://eth-goerli.g.alchemy.com/v2/" + (process.env.ALCHEMY_GOERLI_API_KEY || ''),
+                    blockNumber: 8463485
+                },
             },
-          },
         ],
     });
 
@@ -63,8 +63,33 @@ export async function getStkAave(
     )
 
     await aave.connect(recipient).approve(STK_AAVE, AMOUNT_AAVE)
-
     await stkAave.connect(recipient).stake(recipient.address, AMOUNT_AAVE)
+
+}
+
+const toBytes32 = (bn: BigNumber) => {
+    return ethers.utils.hexlify(ethers.utils.zeroPad(bn.toHexString(), 32));
+};
+
+// AAVE Slot => 0
+
+export async function mintTokenStorage(
+    token: string,
+    recipient: SignerWithAddress,
+    amount: BigNumber,
+    slot: number
+) {
+
+    const index = ethers.utils.solidityKeccak256(
+        ["uint256", "uint256"],
+        [recipient.address, slot] // key, slot
+    );
+
+    await hre.network.provider.send("hardhat_setStorageAt", [
+        token,
+        index.toString(),
+        toBytes32(amount).toString(),
+    ]);
 
 }
 
