@@ -28,7 +28,7 @@ GHO_yearly_APY = Decimal(0.02) # current eqv to 2% APY
 max_interest_rate_discount = Decimal(0.20)
 
 # from Dullahan
-vault_TVL = Decimal(80_000)
+vault_TVL = Decimal(80000)
 renting_fee_yearly = Decimal(0.085)
 renting_fee_per_sec = renting_fee_yearly / year
 
@@ -63,7 +63,7 @@ print("and renting yearly rate is based on an estimation of the total borrowed G
 
 max_discount_GHO_borrow_APY = GHO_yearly_APY * (Decimal(1) - max_interest_rate_discount)
 
-utilization_steps = Decimal(1_000)
+utilization_steps = Decimal(1000)
 current_utilization = Decimal(0)
 
 while(current_utilization <= vault_TVL):
@@ -82,7 +82,7 @@ while(current_utilization <= vault_TVL):
         print()
 
     yearly_rate = current_rate * year
-    yearly_renting_rate = yearly_rate / GHO_per_stkAAVE # si yearly_rate=> 0.085 => 0.00085 GHO/GHO debt à l'année
+    yearly_renting_rate = yearly_rate / GHO_per_stkAAVE # si yearly_rate=> 0.085 => 0.00085 GHO/GHO debt a l'annee
     print(yearly_rate)
     print(yearly_renting_rate)
     print()
@@ -141,13 +141,14 @@ subfigs = [fig.add_subfigure(gs) for gs in gridspec]
 
 
 for row, subfig in enumerate(subfigs):
-    subfig.suptitle(f'GHO Borrow Interest Discount: {max_interest_rate_discount * Decimal(100)}%')
+    max_interest_rate_discount_percent = format(max_interest_rate_discount * Decimal(100), '.2f')
+    subfig.suptitle(f'GHO Borrow Interest Discount: {max_interest_rate_discount_percent}%')
 
     axs = subfig.subplots(nrows=1, ncols=3)
     
     axs[0].plot(utilization_rates, yearly_renting_rates, color='violet')
     axs[0].set_title('Yearly Renting Rates', y=1.0, pad=-14)
-    axs[0].set_ylim(0, 1)
+    axs[0].set_ylim(0, 0.5)
     
     axs[1].plot(utilization_rates, vanilla_rates, color='red', label="Vanilla Borrow Rate")
     axs[1].plot(utilization_rates, discounted_rates, color='green', label="Discounted Borrow rate")
@@ -158,7 +159,7 @@ for row, subfig in enumerate(subfigs):
     
     axs[2].plot(utilization_rates, dstkAave_APRs, color='orange')
     axs[2].set_title('dstkAave holders APR', y=1.0, pad=-14)
-    axs[2].set_ylim(0, 1)
+    axs[2].set_ylim(0, 0.5)
 
 # set the spacing between subplots
 """plt.subplots_adjust(left=0.1,

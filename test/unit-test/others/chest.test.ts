@@ -2,16 +2,16 @@ const hre = require("hardhat");
 import { ethers } from "hardhat";
 import chai from "chai";
 import { solidity } from "ethereum-waffle";
-import { DullahanTreasureChest } from "../../typechain/DullahanTreasureChest";
-import { IERC20 } from "../../typechain/oz/interfaces/IERC20";
-import { IERC20__factory } from "../../typechain/factories/oz/interfaces/IERC20__factory";
+import { DullahanTreasureChest } from "../../../typechain/DullahanTreasureChest";
+import { IERC20 } from "../../../typechain/oz/interfaces/IERC20";
+import { IERC20__factory } from "../../../typechain/factories/oz/interfaces/IERC20__factory";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ContractFactory } from "@ethersproject/contracts";
 
 import {
     getERC20,
     resetFork
-} from "../utils/utils";
+} from "../../utils/utils";
 
 import { 
     REWARD_TOKEN_1,
@@ -20,7 +20,7 @@ import {
     REWARD_TOKEN_2,
     HOLDER_REWARD_2,
     AMOUNT_REWARD_2
-} from "../utils/constants"
+} from "../../utils/constants"
 
 
 chai.use(solidity);

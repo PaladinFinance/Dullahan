@@ -8,7 +8,7 @@
     "clean": "npx hardhat clean",
     "compile": "npx hardhat compile",
     "test-unit": "npx hardhat test test/unit-test/**/*.ts",
-    "test-goerli": "npx hardhat test test/live-test/**/*.ts",
+    "test-goerli": "npx hardhat test test/fork-test/*.ts",
     "test": "npx hardhat test",
     "coverage": "npx hardhat coverage --network hardhat --solcoverjs .solcover.js",
     "deploy": "npx hardhat run --network mainnet",

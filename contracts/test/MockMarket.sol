@@ -8,6 +8,8 @@ import "./MockERC20.sol";
 contract MockMarket {
     using SafeERC20 for IERC20;
 
+    uint256 private constant MAX_UINT256 = 2**256 - 1;
+
     address public gho;
     address public debtGho;
 
@@ -35,7 +37,8 @@ contract MockMarket {
         MockERC20(aToken).mint(onBehalfOf, amount);
     }
 
-    function withdraw(address asset, uint256 amount, address to) external {
+    function withdraw(address asset, uint256 amount, address to) external returns(uint256) {
+        if(amount == MAX_UINT256) amount = deposits[asset][msg.sender];
 
         address aToken = aTokens[asset];
 
@@ -43,6 +46,8 @@ contract MockMarket {
         MockERC20(aToken).burn(msg.sender, amount);
 
         IERC20(asset).safeTransfer(to, amount);
+
+        return amount;
     }
 
 
@@ -55,13 +60,16 @@ contract MockMarket {
         MockERC20(debtGho).mint(onBehalfOf, amount);
     }
 
-    function repay(address asset, uint256 amount, uint256 rateMode, address onBehalfOf) external {
+    function repay(address asset, uint256 amount, uint256 rateMode, address onBehalfOf) external returns(uint256) {
         asset; rateMode;
+        if(amount == MAX_UINT256) amount = debt[onBehalfOf];
 
         debt[onBehalfOf] -= amount;
 
         MockERC20(gho).burn(msg.sender, amount);
         MockERC20(debtGho).burn(onBehalfOf, amount);
+
+        return amount;
     }
 
     // fake supply APY

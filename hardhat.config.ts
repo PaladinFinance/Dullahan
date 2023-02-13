@@ -48,6 +48,10 @@ const config: HardhatUserConfig = {
       url: process.env.MAINNET_URI || '',
       accounts: process.env.MAINNET_PRIVATE_KEY ? [process.env.MAINNET_PRIVATE_KEY] : TEST_ACCOUNT,
     },
+    goerli: {
+      url: process.env.GOERLI_URI || '',
+      accounts: process.env.GOERLI_PRIVATE_KEY ? [process.env.GOERLI_PRIVATE_KEY] : TEST_ACCOUNT,
+    },
     fork: {
       url: process.env.FORK_URI || '',
       accounts: process.env.FORK_PRIVATE_KEY ? [process.env.FORK_PRIVATE_KEY] : TEST_ACCOUNT,

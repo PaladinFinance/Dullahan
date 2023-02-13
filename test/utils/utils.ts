@@ -39,7 +39,7 @@ export async function resetForkGoerli() {
             {
                 forking: {
                     jsonRpcUrl: "https://eth-goerli.g.alchemy.com/v2/" + (process.env.ALCHEMY_GOERLI_API_KEY || ''),
-                    blockNumber: 8463485
+                    blockNumber: 8471590
                 },
             },
         ],

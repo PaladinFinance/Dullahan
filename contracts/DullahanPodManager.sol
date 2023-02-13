@@ -377,7 +377,11 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         if(pods[pod].podAddress == address(0)) revert Errors.PodInvalid();
         
         // Make the Pod claim any pending stkAAVE rewards
-        DullahanPod(pod).compoundStkAave();
+        if(msg.sender != pod) {
+            // Otherwise the Pod will already call the internal _getStkAaveRewards(); method
+            // And will block the method because of the nonReentrant modifier
+            DullahanPod(pod).compoundStkAave();
+        }
 
         // Calculate the amount of stkAave the Pod needs based on the amount of GHO debt it has
         uint256 neededStkAaveAmount = _calculatedNeededStkAave(pod, 0);
@@ -583,7 +587,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     * @notice Notify fees paid by a Pod
     * @param feeAmount Amount of fees paid
     */
-    function notifyPayFee(uint256 feeAmount) external nonReentrant isValidPod {
+    function notifyPayFee(uint256 feeAmount) external isValidPod {
         address _pod = msg.sender;
         // Update the amount of fees owed by the Pod
         pods[_pod].accruedFees -= feeAmount;
@@ -598,7 +602,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     * @notice Notify minting fees paid by a Pod
     * @param feeAmount Amount of fees paid
     */
-    function notifyMintingFee(uint256 feeAmount) external nonReentrant isValidPod {
+    function notifyMintingFee(uint256 feeAmount) external isValidPod {
         address _pod = msg.sender;
 
         // Set the received minting fees as Reserve

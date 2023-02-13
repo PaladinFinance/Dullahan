@@ -247,7 +247,7 @@ contract DullahanPod is ReentrancyGuard {
     * @param amount Amount to withdraw
     * @param receiver Address to receive the collateral
     */
-    // Can give MAX_UINT256 to unstake full balance
+    // Can give MAX_UINT256 to withdraw full balance
     function withdrawCollateral(uint256 amount, address receiver) external nonReentrant isInitialized onlyPodOwner {
         if(amount == 0) revert Errors.NullAmount();
         if(receiver == address(0)) revert Errors.AddressZero();
@@ -443,9 +443,6 @@ contract DullahanPod is ReentrancyGuard {
     * @param receiver Address to receive the collateral
     */
     function _withdrawCollateral(uint256 amount, address receiver) internal {
-        // If given MAX_UINT256, we want to withdraw all the collateral
-        if(amount == MAX_UINT256) amount = IERC20(aToken).balanceOf(address(this));
-
         // Not allowed to withdraw collateral before paying the owed fees,
         // in case we need to liquidate part if this collateral to pay
         // the fees owed by this Pod.
@@ -454,9 +451,10 @@ contract DullahanPod is ReentrancyGuard {
         ) revert Errors.CollateralBlocked();
 
         // Withdraw from the Aave Pool & send directly to the given receiver
-        IAavePool(DullahanRegistry(registry).AAVE_POOL_V3()).withdraw(collateral, amount, receiver);
+        // If given MAX_UINT256, we want to withdraw all the collateral
+        uint256 withdrawnAmount = IAavePool(DullahanRegistry(registry).AAVE_POOL_V3()).withdraw(collateral, amount, receiver);
 
-        emit CollateralWithdrawn(collateral, amount);
+        emit CollateralWithdrawn(collateral, withdrawnAmount);
     }
     
     /**

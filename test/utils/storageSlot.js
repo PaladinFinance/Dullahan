@@ -57,7 +57,7 @@ async function findBalancesSlot(tokenAddress) {
 
 (async () => {
 
-    const token_address = ""
+    const token_address = "0x84ced17d95F3EC7230bAf4a369F1e624Ae60090d"
 
     const slot = await findBalancesSlot(token_address)
 
