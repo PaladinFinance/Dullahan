@@ -45,7 +45,7 @@ async function main() {
     const DullahanDiscountCalculator = await ethers.getContractFactory("DullahanDiscountCalculator");
     const DullahanFeeModule = await ethers.getContractFactory("DullahanFeeModule");
 
-    /*console.log('Deploying OracleModule  ...')
+    console.log('Deploying OracleModule  ...')
     const oracleModule = await OracleModule.deploy(
         ORACLE_ADDRESS,
         GHO
@@ -94,15 +94,9 @@ async function main() {
     )
     await feeModule.deployed()
     console.log('DullahanFeeModule : ', feeModule.address)
-    console.log()*/
+    console.log()
 
-    const vault = DullahanVault.attach("0x6c4a5Ae899E86BD2f849b3f53261278e66Ff688C");
-    const registry = DullahanRegistry.attach("0xd04ee22C1cF9e1dd839906632A8dA1297ceDADA5");
-    const oracleModule = OracleModule.attach("0x09F818fD47b0D4CFD139786026739d79Bb7738a4");
-    const calculator = DullahanDiscountCalculator.attach("0xFfA4c7691bd0e163Ed86fe9C7086C5944cB813C3");
-    const feeModule = DullahanFeeModule.attach("0x71EA44CB514EfB89444d07640Ed041e5b3f480B1");
-
-    /*console.log('Deploying DullahanRewardsStaking  ...')
+    console.log('Deploying DullahanRewardsStaking  ...')
     const staking = await DullahanRewardsStaking.deploy(
         vault.address
     )
@@ -128,18 +122,15 @@ async function main() {
     )
     await podManager.deployed()
     console.log('DullahanPodManager : ', podManager.address)
-    console.log()*/
-    const staking = DullahanRewardsStaking.attach("0xC912273c361619d7FBEff1Ced920560fbfc38d8C");
-    const podImplementation = DullahanPod.attach("0x8A542E343df9700cB83FE7b959d0Ac6FE32ee77e");
-    const podManager = DullahanPodManager.attach("0xD8B9147B8f77721635b1C4128c25dA601F10edc4");
+    console.log()
 
 
     console.log()
     console.log()
     console.log('Initiate Vault  ...')
 
-    /*const approve_tx_1 = await stkAAVE.connect(deployer).approve(vault.address, seed_deposit)
-    await approve_tx_1.wait(10)*/
+    const approve_tx_1 = await stkAAVE.connect(deployer).approve(vault.address, seed_deposit)
+    await approve_tx_1.wait(10)
 
     const init_tx_1 = await vault.connect(deployer).init(deployer.address, { gasLimit: 1_000_000 })
     await init_tx_1.wait(10)
