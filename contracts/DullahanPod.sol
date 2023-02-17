@@ -21,6 +21,8 @@ import "./interfaces/IGovernancePowerDelegationToken.sol";
 import "./interfaces/IAaveRewardsController.sol";
 import {Errors} from "./utils/Errors.sol";
 
+import "hardhat/console.sol";
+
 /** @title Dullahan Pod contract
  *  @author Paladin
  *  @notice Dullahan Pod, unique to each user, allowing to depoist collateral,
@@ -450,9 +452,18 @@ contract DullahanPod is ReentrancyGuard {
             IDullahanPodManager(manager).podOwedFees(address(this)) > 0
         ) revert Errors.CollateralBlocked();
 
+        console.log("");
+        console.log("Input param %s", amount);
+        console.log("aToken balance %s", IERC20(aToken).balanceOf(address(this)));
+        if(amount != MAX_UINT256) console.log("Diff: %s", IERC20(aToken).balanceOf(address(this)) - amount);
+
         // Withdraw from the Aave Pool & send directly to the given receiver
         // If given MAX_UINT256, we want to withdraw all the collateral
         uint256 withdrawnAmount = IAavePool(DullahanRegistry(registry).AAVE_POOL_V3()).withdraw(collateral, amount, receiver);
+
+        console.log("withdrawnAmount %s", withdrawnAmount);
+        console.log("aToken balance %s", IERC20(aToken).balanceOf(address(this)));
+        console.log("");
 
         emit CollateralWithdrawn(collateral, withdrawnAmount);
     }
@@ -465,16 +476,26 @@ contract DullahanPod is ReentrancyGuard {
     function _repayGho(uint256 amountToRepay) internal returns(bool) {
         IDullahanPodManager _manager = IDullahanPodManager(manager);
 
+        console.log("");
+        console.log("Input param %s", amountToRepay);
+
         // Update this contract stkAAVE current balance is there is one
         _getStkAaveRewards();
 
         // Fetch the current owed fees for this Pod from the Pod Manager
         uint256 owedFees = _manager.podOwedFees(address(this));
 
+        console.log(amountToRepay == MAX_UINT256);
+
+        console.log("Owed fees %s", owedFees);
+        console.log("Pod Debt %s", podDebtBalance());
+
         // If given the MAX_UINT256, we want to repay the fees and all the debt
         if(amountToRepay == MAX_UINT256) {
             amountToRepay = owedFees + podDebtBalance();
         }
+
+        console.log("amountToRepay %s", amountToRepay);
 
         // Pull the GHO from the Pod Owner
         IERC20 _gho = IERC20(DullahanRegistry(registry).GHO());
@@ -490,7 +511,11 @@ contract DullahanPod is ReentrancyGuard {
             realRepayAmount = amountToRepay - owedFees;
             feesToPay = owedFees;
         }
-        
+
+        console.log("feesToPay %s", feesToPay);
+        console.log("realRepayAmount %s", realRepayAmount);
+        console.log("Diff: %s", podDebtBalance() - realRepayAmount);
+
         // If there is owed fees to pay, transfer the needed amount to the Pod Manager & notify it
         if(feesToPay > 0) {
             _gho.safeTransfer(manager, feesToPay);
@@ -503,6 +528,8 @@ contract DullahanPod is ReentrancyGuard {
             _gho.safeIncreaseAllowance(_aavePool, realRepayAmount);
             IAavePool(_aavePool).repay(address(_gho), realRepayAmount, 2, address(this)); // 2 => variable mode (might need to change that)
         }
+        console.log("Pod Debt %s", podDebtBalance());
+        console.log("");
 
         // Notify the Pod Manager, so not needed stkAave in this Pod
         // can be freed & pull back by the Vaut

@@ -159,7 +159,7 @@ describe('Dullahan full system tests - Goerli version', () => {
 
         await mintTokenStorage(TEST_TOKEN_1, admin, random_amount, 0);
         await mintTokenStorage(TEST_TOKEN_3, admin, random_amount, 0);
-        const token2_holder = "0xF8f5824FeC7CaFdc6aCefF219dE762b6f85B90b1"
+        const token2_holder = "0x518B13838F5810979C173d79699F2ADB92E4956f"
         await getERC20(admin, token2_holder, token2, admin.address, ethers.utils.parseEther('1000'));
 
         await aave.connect(admin).approve(stkAave_staking.address, aave_amount);
@@ -490,7 +490,7 @@ describe('Dullahan full system tests - Goerli version', () => {
 
             await pod.connect(podOwner).mintGho(borrow_amount, podOwner.address)
 
-            await advanceTime(WEEK.mul(8).toNumber())
+            await advanceTime(WEEK.mul(12).toNumber())
 
         });
 
@@ -584,7 +584,7 @@ describe('Dullahan full system tests - Goerli version', () => {
 
         it(' should repay all GHO & return all stkAAVE', async () => {
 
-            const holder = "0x61702cfe4f3d57CDeCDa15732ce7ccFF0529F2e0"
+            const holder = "0x85c792d6E608D90b7513F01AefA6c8260D3a7aF5"
             await getERC20(admin, holder, gho, admin.address, ethers.utils.parseEther('50000'));
 
             await gho.connect(admin).transfer(podOwner.address, ethers.utils.parseEther('50000'))
@@ -614,7 +614,7 @@ describe('Dullahan full system tests - Goerli version', () => {
 
         beforeEach(async () => {
 
-            const holder = "0x61702cfe4f3d57CDeCDa15732ce7ccFF0529F2e0"
+            const holder = "0x85c792d6E608D90b7513F01AefA6c8260D3a7aF5"
             await getERC20(admin, holder, gho, admin.address, ethers.utils.parseEther('50000'));
 
             await gho.connect(admin).transfer(podOwner.address, ethers.utils.parseEther('50000'))
@@ -631,7 +631,7 @@ describe('Dullahan full system tests - Goerli version', () => {
 
             await pod.connect(podOwner).mintGho(borrow_amount, podOwner.address)
 
-            await advanceTime(WEEK.mul(8).toNumber())
+            await advanceTime(WEEK.mul(6).toNumber())
 
             await gho.connect(podOwner).approve(pod.address, ethers.constants.MaxUint256)
 
@@ -697,7 +697,7 @@ describe('Dullahan full system tests - Goerli version', () => {
 
         beforeEach(async () => {
 
-            const holder = "0x61702cfe4f3d57CDeCDa15732ce7ccFF0529F2e0"
+            const holder = "0x85c792d6E608D90b7513F01AefA6c8260D3a7aF5"
             await getERC20(admin, holder, gho, admin.address, ethers.utils.parseEther('50000'));
 
             await gho.connect(admin).transfer(podOwner.address, ethers.utils.parseEther('50000'))
@@ -714,7 +714,7 @@ describe('Dullahan full system tests - Goerli version', () => {
 
             await pod.connect(podOwner).mintGho(borrow_amount, podOwner.address)
 
-            await advanceTime(WEEK.mul(8).toNumber())
+            await advanceTime(WEEK.mul(4).toNumber())
 
             await gho.connect(podOwner).approve(pod.address, ethers.constants.MaxUint256)
 
@@ -864,7 +864,7 @@ describe('Dullahan full system tests - Goerli version', () => {
 
         beforeEach(async () => {
 
-            const holder = "0x61702cfe4f3d57CDeCDa15732ce7ccFF0529F2e0"
+            const holder = "0x85c792d6E608D90b7513F01AefA6c8260D3a7aF5"
             await getERC20(admin, holder, gho, admin.address, ethers.utils.parseEther('50000'));
 
             await gho.connect(admin).transfer(podOwner.address, ethers.utils.parseEther('50000'))
