@@ -158,9 +158,10 @@ describe('Dullahan full system tests - Goerli version', () => {
         await mintTokenStorage(AAVE, admin, aave_amount, 0);
 
         await mintTokenStorage(TEST_TOKEN_1, admin, random_amount, 0);
+        await mintTokenStorage(TEST_TOKEN_2, admin, random_amount, 0);
         await mintTokenStorage(TEST_TOKEN_3, admin, random_amount, 0);
-        const token2_holder = "0x518B13838F5810979C173d79699F2ADB92E4956f"
-        await getERC20(admin, token2_holder, token2, admin.address, ethers.utils.parseEther('1000'));
+        /*const token2_holder = "0x518B13838F5810979C173d79699F2ADB92E4956f"
+        await getERC20(admin, token2_holder, token2, admin.address, ethers.utils.parseEther('1000'));*/
 
         await aave.connect(admin).approve(stkAave_staking.address, aave_amount);
         await stkAave_staking.connect(admin).stake(admin.address, aave_amount);
