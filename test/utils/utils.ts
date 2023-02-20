@@ -26,6 +26,7 @@ export async function resetFork() {
                     jsonRpcUrl: "https://eth-mainnet.alchemyapi.io/v2/" + (process.env.ALCHEMY_API_KEY || ''),
                     blockNumber: 16076533
                 },
+                gas: 15000000,
             },
         ],
     });
@@ -41,6 +42,7 @@ export async function resetForkGoerli() {
                     jsonRpcUrl: "https://eth-goerli.g.alchemy.com/v2/" + (process.env.ALCHEMY_GOERLI_API_KEY || ''),
                     blockNumber: 8502420
                 },
+                gas: 15000000,
             },
         ],
     });

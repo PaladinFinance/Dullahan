@@ -41,8 +41,9 @@ const config: HardhatUserConfig = {
     hardhat: {
       forking: {
         url: "https://eth-mainnet.alchemyapi.io/v2/" + (process.env.ALCHEMY_API_KEY || ''),
-        blockNumber: 16076533
-      }
+        blockNumber: 16076533,
+      },
+      gas: 15000000,
     },
     mainnet: {
       url: process.env.MAINNET_URI || '',
@@ -51,6 +52,7 @@ const config: HardhatUserConfig = {
     goerli: {
       url: process.env.GOERLI_URI || '',
       accounts: process.env.GOERLI_PRIVATE_KEY ? [process.env.GOERLI_PRIVATE_KEY] : TEST_ACCOUNT,
+      gas: 15000000,
     },
     fork: {
       url: process.env.FORK_URI || '',
