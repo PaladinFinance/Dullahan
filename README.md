@@ -4,7 +4,7 @@
 
 ## Overview
 
-A Dullmahan comes from the Irish mythology, and is depicted as a headless knight riding a black horse, holding its own head in its hand. This product is the newest member of the Paladin round table, and is aimed to use the best synergy betwenn stkAAVE, GHO & vote lending, the image of a ghost knight is the best incarnation of it.
+A Dullahan comes from the Irish mythology, and is depicted as a headless knight riding a black horse, holding its own head in its hand. This product is the newest member of the Paladin round table, and is aimed to use the best synergy betwenn stkAAVE, GHO & vote lending, the image of a ghost knight is the best incarnation of it.
 
 Dullahan is the next evolution of the palStkAave, aiming to supercharge the staked AAVE token.  
 The Dullahan vault will allow users to deposit their stkAAVE tokens to get the best yield from it,

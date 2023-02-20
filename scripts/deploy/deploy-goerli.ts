@@ -109,6 +109,7 @@ async function main() {
     await podImplementation.deployed()
     console.log('DullahanPod : ', podImplementation.address)
     console.log()
+
     console.log('Deploying DullahanPodManager  ...')
     const podManager = await DullahanPodManager.deploy(
         vault.address,

@@ -14,6 +14,7 @@
     "deploy": "npx hardhat run --network mainnet",
     "setup-foundry": "foundryup && forge install",
     "test-fuzz": "export $(cat .env | xargs) && forge test --fork-url $MAINNET_URI --fork-block-number 16076533 -vv",
+    "foundry-smt-checker": "FOUNDRY_PROFILE=smt forge build",
     "docgen": "npx hardhat docgen"
   },
   "author": "",
