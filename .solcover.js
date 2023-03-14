@@ -1,6 +1,6 @@
 module.exports = {
     norpc: true,
-    testCommand: "npm run test",
+    testCommand: "npx hardhat test test/unit-test/**/*.ts",
     compileCommand: "npm run compile",
     skipFiles: [
       './interfaces',
