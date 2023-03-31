@@ -393,11 +393,11 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         if(currentStkAaveBalance > neededStkAaveAmount) {
             uint256 pullAmount = currentStkAaveBalance - neededStkAaveAmount;
 
+            // Make the Vault pull the stkAave from the Pod
+            DullahanVault(vault).pullRentedStkAave(pod, pullAmount);
+
             // Update the tracked rented amount
             pods[pod].rentedAmount -= pullAmount;
-
-            // And make the Vault pull the stkAave from the Pod
-            DullahanVault(vault).pullRentedStkAave(pod, pullAmount);
 
             emit FreedStkAave(pod, pullAmount);
         }
@@ -460,12 +460,12 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
             );
         }
 
-        // Pull the GHO fees from the liquidator
-        IERC20(DullahanRegistry(registry).GHO()).safeTransferFrom(liquidator, address(this), paidFees);
-
         // Reset owed fees for the Pod & add fees to Reserve
         _pod.accruedFees = 0;
         reserveAmount += paidFees;
+
+        // Pull the GHO fees from the liquidator
+        IERC20(DullahanRegistry(registry).GHO()).safeTransferFrom(liquidator, address(this), paidFees);
 
         // Liquidate & send to the liquidator
         DullahanPod(pod).liquidateCollateral(collateralAmount, liquidator);

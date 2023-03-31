@@ -529,12 +529,12 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         // Fetch Aave Safety Module rewards & stake them into stkAAVE
         _getStkAaveRewards();
 
-        // We consider that pod give MAX_UINT256 allowance to this contract when created
-        IERC20(STK_AAVE).safeTransferFrom(pod, address(this), amount);
         // Pull the tokens from the Pod, and update the tracked rented amount for the
         // corresponding Manager
         podManagers[manager].totalRented -= safe248(amount);
         totalRentedAmount -= amount;
+        // We consider that pod give MAX_UINT256 allowance to this contract when created
+        IERC20(STK_AAVE).safeTransferFrom(pod, address(this), amount);
 
         emit PullFromPod(manager, pod, amount);
     }
@@ -843,8 +843,8 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         // Fetch Aave Safety Module rewards & stake them into stkAAVE
         _getStkAaveRewards();
 
-        reserveAmount += amount;
         IERC20(STK_AAVE).safeTransferFrom(msg.sender, address(this), amount);
+        reserveAmount += amount;
 
         emit ReserveDeposit(msg.sender, amount);
 
@@ -864,8 +864,8 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         // Fetch Aave Safety Module rewards & stake them into stkAAVE
         _getStkAaveRewards();
 
-        reserveAmount -= amount;
         IERC20(STK_AAVE).safeTransfer(receiver, amount);
+        reserveAmount -= amount;
 
         emit ReserveWithdraw(receiver, amount);
 
