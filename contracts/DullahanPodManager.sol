@@ -98,9 +98,9 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     /** @notice Address of the Chest to receive fees */
     address public protocolFeeChest;
 
-    /** @notice Last update timestamp for the Index */
-    uint256 public lastUpdatedIndex;
     /** @notice Last updated value of the Index */
+    uint256 public lastUpdatedIndex;
+    /** @notice Last update timestamp for the Index */
     uint256 public lastIndexUpdate;
 
     /** @notice Extra ratio applied during liquidations */
