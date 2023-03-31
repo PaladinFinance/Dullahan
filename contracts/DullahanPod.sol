@@ -392,11 +392,6 @@ contract DullahanPod is ReentrancyGuard {
         // (Using MAX_UINT256 here will withdraw everything)
         IAavePool(DullahanRegistry(registry).AAVE_POOL_V3()).withdraw(collateral, amount, address(this));
 
-        // If the total collateral in the Pod is to be liquidated, send the full balance
-        if(amount == type(uint256).max) {
-            amount = IERC20(collateral).balanceOf(address(this));
-        }
-
         // Send the tokens to the liquidator (here the given receiver)
         IERC20(collateral).safeTransfer(receiver, amount);
 
