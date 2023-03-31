@@ -661,7 +661,9 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         address from,
         address to,
         uint256 amount
-    ) internal isInitialized whenNotPaused override {}
+    ) internal isInitialized whenNotPaused override virtual {
+        super._beforeTokenTransfer(from, to, amount);
+    }
 
     /**
     * @dev Hook executed after each transfer
@@ -673,7 +675,9 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         address from,
         address to,
         uint256 amount
-    ) internal override {}
+    ) internal override virtual {
+        super._afterTokenTransfer(from, to, amount);
+    }
 
     /**
     * @dev Claim AAVE rewards from the Safety Module & stake them to receive stkAAVE
