@@ -73,6 +73,9 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     /** @notice Address of the Pod implementation */
     address public immutable podImplementation;
 
+    /** @notice Address of the Chest to receive fees */
+    address public immutable protocolFeeChest;
+
     /** @notice Address of the Dullahan Registry */
     address public registry;
 
@@ -94,9 +97,6 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     address public oracleModule;
     /** @notice Address of the Discount Calculator Module */
     address public discountCalculator;
-
-    /** @notice Address of the Chest to receive fees */
-    address public protocolFeeChest;
 
     /** @notice Last updated value of the Index */
     uint256 public lastUpdatedIndex;
