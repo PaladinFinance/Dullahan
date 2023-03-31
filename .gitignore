@@ -13,3 +13,4 @@ bin/
 coverage*
 .env
 **/.env
+.hypothesis/
