@@ -31,8 +31,6 @@ contract DullahanPod is ReentrancyGuard {
 
     // Constants
 
-    /** @notice 1e18 scale */
-    uint256 public constant UNIT = 1e18;
     /** @notice Max value for BPS - 100% */
     uint256 public constant MAX_BPS = 10000;
     /** @notice Max value possible for an uint256 */
