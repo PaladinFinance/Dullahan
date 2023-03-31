@@ -235,9 +235,9 @@ contract DullahanPod is ReentrancyGuard {
         // And deposit it in the Aave Pool
         address _aavePool = DullahanRegistry(registry).AAVE_POOL_V3();
         _collateral.safeIncreaseAllowance(_aavePool, amount);
-        IAavePool(_aavePool).supply(collateral, amount, address(this), 0);
+        IAavePool(_aavePool).supply(address(_collateral), amount, address(this), 0);
 
-        emit CollateralDeposited(collateral, amount);
+        emit CollateralDeposited(address(_collateral), amount);
     }
 
     /**

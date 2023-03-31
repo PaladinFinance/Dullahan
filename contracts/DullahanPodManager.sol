@@ -281,11 +281,13 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         Pod storage _pod = pods[pod];
         uint256 owedFees = podCurrentOwedFees(pod);
 
+        address _collateral = _pod.collateral;
+
         // Get the current amount of collateral left in the Pod (from the aToken balance of the Pod, since 1:1 with collateral)
         // (should not have conversion issues since aTokens have the same amount of decimals than the asset)
-        uint256 podCollateralBalance = IERC20(aTokenForCollateral[_pod.collateral]).balanceOf(pod);
+        uint256 podCollateralBalance = IERC20(aTokenForCollateral[_collateral]).balanceOf(pod);
         // Get amount of collateral to liquidate
-        collateralAmount = IOracleModule(oracleModule).getCollateralAmount(_pod.collateral, owedFees);
+        collateralAmount = IOracleModule(oracleModule).getCollateralAmount(_collateral, owedFees);
         // Extra ratio on amount to liquidate: Penality + liquidation bonus
         collateralAmount += (collateralAmount * extraLiquidationRatio) / MAX_BPS;
 
@@ -297,7 +299,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
             // Calculate the reduced amount of fees to be received based on real collateral amount we can get
             feeAmount = IOracleModule(oracleModule).getFeeAmount(
-                _pod.collateral,
+                _collateral,
                 (collateralAmount * MAX_BPS) / (MAX_BPS + extraLiquidationRatio)
             );
         }
@@ -435,12 +437,13 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
         Pod storage _pod = pods[pod];
         uint256 owedFees = _pod.accruedFees;
+        address _collateral = _pod.collateral;
 
         // Get the current amount of collateral left in the Pod (from the aToken balance of the Pod, since 1:1 with collateral)
         // (should not have conversion issues since aTokens have the same amount of decimals than the asset)
-        uint256 podCollateralBalance = IERC20(aTokenForCollateral[_pod.collateral]).balanceOf(pod);
+        uint256 podCollateralBalance = IERC20(aTokenForCollateral[_collateral]).balanceOf(pod);
         // Get amount of collateral to liquidate
-        uint256 collateralAmount = IOracleModule(oracleModule).getCollateralAmount(_pod.collateral, owedFees);
+        uint256 collateralAmount = IOracleModule(oracleModule).getCollateralAmount(_collateral, owedFees);
         // Extra ratio on amount to liquidate: Penality + liquidation bonus
         collateralAmount += (collateralAmount * extraLiquidationRatio) / MAX_BPS;
 
@@ -452,7 +455,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
             // Calculate the reduced amount of fees to be received based on real collateral amount we can get
             paidFees = IOracleModule(oracleModule).getFeeAmount(
-                _pod.collateral,
+                _collateral,
                 (collateralAmount * MAX_BPS) / (MAX_BPS + extraLiquidationRatio)
             );
         }
@@ -467,7 +470,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         // Liquidate & send to the liquidator
         DullahanPod(pod).liquidateCollateral(collateralAmount, liquidator);
 
-        emit LiquidatedPod(pod, _pod.collateral, collateralAmount, paidFees);
+        emit LiquidatedPod(pod, _collateral, collateralAmount, paidFees);
 
         return true;
     }
