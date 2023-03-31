@@ -202,7 +202,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         oracleModule = _oracleModule;
         discountCalculator = _discountCalculator;
 
-        lastUpdatedIndex = block.timestamp;
+        lastIndexUpdate = block.timestamp;
     }
 
 
