@@ -24,8 +24,6 @@ contract DullahanFeeModule is IFeeModule, Owner {
 
     /** @notice 1e18 scale */
     uint256 public constant UNIT = 1e18;
-    /** @notice Max value for BPS - 100% */
-    uint256 public constant MAX_BPS = 10000;
 
     /** @notice Threshold ratio to apply the extra multiplier */
     uint256 public constant TRESHOLD = 0.75 ether;
