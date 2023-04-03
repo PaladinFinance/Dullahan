@@ -397,7 +397,12 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
             DullahanVault(vault).pullRentedStkAave(pod, pullAmount);
 
             // Update the tracked rented amount
-            pods[pod].rentedAmount -= pullAmount;
+            if(pullAmount == currentStkAaveBalance) {
+                // We pull all the Pod stkAAVE, we can reset the rentedAmount to 0
+                pods[pod].rentedAmount = 0;
+            } else {
+                pods[pod].rentedAmount -= pullAmount;
+            }
 
             emit FreedStkAave(pod, pullAmount);
         }
@@ -427,7 +432,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         uint256 currentStkAaveBalance = IERC20(DullahanRegistry(registry).STK_AAVE()).balanceOf(pod);
         if(currentStkAaveBalance > 0) {
             // Update the tracked rented amount
-            pods[pod].rentedAmount -= currentStkAaveBalance;
+            pods[pod].rentedAmount = 0;
 
             // And make the Vault pull the stkAave from the Pod
             DullahanVault(vault).pullRentedStkAave(pod, currentStkAaveBalance);
