@@ -92,7 +92,7 @@ contract DullahanFeeModule is IFeeModule, Owner {
         // If the Utilization Rate is over the Threshold, increase the fee per second
         // using the calculated multiplier
         if(utilRate >= TRESHOLD) {
-            uint256 multiplier = BASE_MULTIPLIER + (EXTRA_MULTIPLIER_STEP * (utilRate - TRESHOLD));
+            uint256 multiplier = BASE_MULTIPLIER + ((EXTRA_MULTIPLIER_STEP * (utilRate - TRESHOLD) / UNIT));
             currentFee = (currentFee * multiplier) / UNIT;
         }
     }

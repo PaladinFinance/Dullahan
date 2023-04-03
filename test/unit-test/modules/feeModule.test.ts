@@ -129,7 +129,7 @@ describe('DullahanFeeModule contract tests', () => {
                     let expected_fee_per_sec = base_fee
                     if(util_rate.gte(threshold)) {
                         expected_fee_per_sec = expected_fee_per_sec.mul(
-                            base_mult.add(extra_mult_step.mul(util_rate.sub(threshold)))
+                            base_mult.add(extra_mult_step.mul(util_rate.sub(threshold)).div(UNIT))
                         ).div(UNIT)
                     }
 
