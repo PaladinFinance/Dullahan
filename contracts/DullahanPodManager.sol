@@ -389,6 +389,14 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         uint256 neededStkAaveAmount = _calculatedNeededStkAave(pod, 0);
         uint256 currentStkAaveBalance = IERC20(DullahanRegistry(registry).STK_AAVE()).balanceOf(pod);
 
+        // In case a pod receives direct stkAAVE transfer, we want to track that received amount
+        if(currentStkAaveBalance > pods[pod].rentedAmount) {
+            uint256 balanceDiff = currentStkAaveBalance - pods[pod].rentedAmount;
+
+            // And notify the Vault of the balance increase
+            DullahanVault(vault).notifyRentedAmount(pod, balanceDiff);
+        }
+
         // If the Pod holds more stkAave than needed
         if(currentStkAaveBalance > neededStkAaveAmount) {
             uint256 pullAmount = currentStkAaveBalance - neededStkAaveAmount;
@@ -430,6 +438,15 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         // Free any remaining stkAave in the Pod
         DullahanPod(pod).compoundStkAave();
         uint256 currentStkAaveBalance = IERC20(DullahanRegistry(registry).STK_AAVE()).balanceOf(pod);
+
+        // In case a pod receives direct stkAAVE transfer, we want to track that received amount
+        if(currentStkAaveBalance > pods[pod].rentedAmount) {
+            uint256 balanceDiff = currentStkAaveBalance - pods[pod].rentedAmount;
+
+            // And notify the Vault of the balance increase
+            DullahanVault(vault).notifyRentedAmount(pod, balanceDiff);
+        }
+
         if(currentStkAaveBalance > 0) {
             // Update the tracked rented amount
             pods[pod].rentedAmount = 0;
@@ -550,6 +567,14 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         // & Fetch the current Pod stkAave balance
         uint256 neededStkAaveAmount = _calculatedNeededStkAave(pod, amountToMint);
         uint256 currentStkAaveBalance = IERC20(DullahanRegistry(registry).STK_AAVE()).balanceOf(pod);
+
+        // In case a pod receives direct stkAAVE transfer, we want to track that received amount
+        if(currentStkAaveBalance > pods[pod].rentedAmount) {
+            uint256 balanceDiff = currentStkAaveBalance - pods[pod].rentedAmount;
+
+            // And notify the Vault of the balance increase
+            DullahanVault(vault).notifyRentedAmount(pod, balanceDiff);
+        }
 
         // Get the amount of stkAave to rent from the Vault
         uint256 rentAmount = neededStkAaveAmount > currentStkAaveBalance ? neededStkAaveAmount - currentStkAaveBalance : 0;
