@@ -73,6 +73,9 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     /** @notice Address of the Pod implementation */
     address public immutable podImplementation;
 
+    /** @notice Address of the Chest to receive fees */
+    address public immutable protocolFeeChest;
+
     /** @notice Address of the Dullahan Registry */
     address public registry;
 
@@ -95,12 +98,9 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     /** @notice Address of the Discount Calculator Module */
     address public discountCalculator;
 
-    /** @notice Address of the Chest to receive fees */
-    address public protocolFeeChest;
-
-    /** @notice Last update timestamp for the Index */
-    uint256 public lastUpdatedIndex;
     /** @notice Last updated value of the Index */
+    uint256 public lastUpdatedIndex;
+    /** @notice Last update timestamp for the Index */
     uint256 public lastIndexUpdate;
 
     /** @notice Extra ratio applied during liquidations */
@@ -202,7 +202,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         oracleModule = _oracleModule;
         discountCalculator = _discountCalculator;
 
-        lastUpdatedIndex = block.timestamp;
+        lastIndexUpdate = block.timestamp;
     }
 
 
@@ -281,11 +281,13 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         Pod storage _pod = pods[pod];
         uint256 owedFees = podCurrentOwedFees(pod);
 
+        address _collateral = _pod.collateral;
+
         // Get the current amount of collateral left in the Pod (from the aToken balance of the Pod, since 1:1 with collateral)
         // (should not have conversion issues since aTokens have the same amount of decimals than the asset)
-        uint256 podCollateralBalance = IERC20(aTokenForCollateral[_pod.collateral]).balanceOf(pod);
+        uint256 podCollateralBalance = IERC20(aTokenForCollateral[_collateral]).balanceOf(pod);
         // Get amount of collateral to liquidate
-        collateralAmount = IOracleModule(oracleModule).getCollateralAmount(_pod.collateral, owedFees);
+        collateralAmount = IOracleModule(oracleModule).getCollateralAmount(_collateral, owedFees);
         // Extra ratio on amount to liquidate: Penality + liquidation bonus
         collateralAmount += (collateralAmount * extraLiquidationRatio) / MAX_BPS;
 
@@ -297,7 +299,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
             // Calculate the reduced amount of fees to be received based on real collateral amount we can get
             feeAmount = IOracleModule(oracleModule).getFeeAmount(
-                _pod.collateral,
+                _collateral,
                 (collateralAmount * MAX_BPS) / (MAX_BPS + extraLiquidationRatio)
             );
         }
@@ -387,15 +389,29 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         uint256 neededStkAaveAmount = _calculatedNeededStkAave(pod, 0);
         uint256 currentStkAaveBalance = IERC20(DullahanRegistry(registry).STK_AAVE()).balanceOf(pod);
 
+        // In case a pod receives direct stkAAVE transfer, we want to track that received amount
+        if(currentStkAaveBalance > pods[pod].rentedAmount) {
+            uint256 balanceDiff = currentStkAaveBalance - pods[pod].rentedAmount;
+            pods[pod].rentedAmount += balanceDiff;
+
+            // And notify the Vault of the balance increase
+            DullahanVault(vault).notifyRentedAmount(pod, balanceDiff);
+        }
+
         // If the Pod holds more stkAave than needed
         if(currentStkAaveBalance > neededStkAaveAmount) {
             uint256 pullAmount = currentStkAaveBalance - neededStkAaveAmount;
 
-            // Update the tracked rented amount
-            pods[pod].rentedAmount -= pullAmount;
-
-            // And make the Vault pull the stkAave from the Pod
+            // Make the Vault pull the stkAave from the Pod
             DullahanVault(vault).pullRentedStkAave(pod, pullAmount);
+
+            // Update the tracked rented amount
+            if(pullAmount == currentStkAaveBalance) {
+                // We pull all the Pod stkAAVE, we can reset the rentedAmount to 0
+                pods[pod].rentedAmount = 0;
+            } else {
+                pods[pod].rentedAmount -= pullAmount;
+            }
 
             emit FreedStkAave(pod, pullAmount);
         }
@@ -423,9 +439,19 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         // Free any remaining stkAave in the Pod
         DullahanPod(pod).compoundStkAave();
         uint256 currentStkAaveBalance = IERC20(DullahanRegistry(registry).STK_AAVE()).balanceOf(pod);
+
+        // In case a pod receives direct stkAAVE transfer, we want to track that received amount
+        if(currentStkAaveBalance > pods[pod].rentedAmount) {
+            uint256 balanceDiff = currentStkAaveBalance - pods[pod].rentedAmount;
+            pods[pod].rentedAmount += balanceDiff;
+
+            // And notify the Vault of the balance increase
+            DullahanVault(vault).notifyRentedAmount(pod, balanceDiff);
+        }
+
         if(currentStkAaveBalance > 0) {
             // Update the tracked rented amount
-            pods[pod].rentedAmount -= currentStkAaveBalance;
+            pods[pod].rentedAmount = 0;
 
             // And make the Vault pull the stkAave from the Pod
             DullahanVault(vault).pullRentedStkAave(pod, currentStkAaveBalance);
@@ -435,12 +461,13 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
         Pod storage _pod = pods[pod];
         uint256 owedFees = _pod.accruedFees;
+        address _collateral = _pod.collateral;
 
         // Get the current amount of collateral left in the Pod (from the aToken balance of the Pod, since 1:1 with collateral)
         // (should not have conversion issues since aTokens have the same amount of decimals than the asset)
-        uint256 podCollateralBalance = IERC20(aTokenForCollateral[_pod.collateral]).balanceOf(pod);
+        uint256 podCollateralBalance = IERC20(aTokenForCollateral[_collateral]).balanceOf(pod);
         // Get amount of collateral to liquidate
-        uint256 collateralAmount = IOracleModule(oracleModule).getCollateralAmount(_pod.collateral, owedFees);
+        uint256 collateralAmount = IOracleModule(oracleModule).getCollateralAmount(_collateral, owedFees);
         // Extra ratio on amount to liquidate: Penality + liquidation bonus
         collateralAmount += (collateralAmount * extraLiquidationRatio) / MAX_BPS;
 
@@ -452,22 +479,22 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
             // Calculate the reduced amount of fees to be received based on real collateral amount we can get
             paidFees = IOracleModule(oracleModule).getFeeAmount(
-                _pod.collateral,
+                _collateral,
                 (collateralAmount * MAX_BPS) / (MAX_BPS + extraLiquidationRatio)
             );
         }
-
-        // Pull the GHO fees from the liquidator
-        IERC20(DullahanRegistry(registry).GHO()).safeTransferFrom(liquidator, address(this), paidFees);
 
         // Reset owed fees for the Pod & add fees to Reserve
         _pod.accruedFees = 0;
         reserveAmount += paidFees;
 
+        // Pull the GHO fees from the liquidator
+        IERC20(DullahanRegistry(registry).GHO()).safeTransferFrom(liquidator, address(this), paidFees);
+
         // Liquidate & send to the liquidator
         DullahanPod(pod).liquidateCollateral(collateralAmount, liquidator);
 
-        emit LiquidatedPod(pod, _pod.collateral, collateralAmount, paidFees);
+        emit LiquidatedPod(pod, _collateral, collateralAmount, paidFees);
 
         return true;
     }
@@ -542,6 +569,15 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         // & Fetch the current Pod stkAave balance
         uint256 neededStkAaveAmount = _calculatedNeededStkAave(pod, amountToMint);
         uint256 currentStkAaveBalance = IERC20(DullahanRegistry(registry).STK_AAVE()).balanceOf(pod);
+
+        // In case a pod receives direct stkAAVE transfer, we want to track that received amount
+        if(currentStkAaveBalance > pods[pod].rentedAmount) {
+            uint256 balanceDiff = currentStkAaveBalance - pods[pod].rentedAmount;
+            pods[pod].rentedAmount += balanceDiff;
+
+            // And notify the Vault of the balance increase
+            DullahanVault(vault).notifyRentedAmount(pod, balanceDiff);
+        }
 
         // Get the amount of stkAave to rent from the Vault
         uint256 rentAmount = neededStkAaveAmount > currentStkAaveBalance ? neededStkAaveAmount - currentStkAaveBalance : 0;

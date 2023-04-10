@@ -31,8 +31,6 @@ contract DullahanPod is ReentrancyGuard {
 
     // Constants
 
-    /** @notice 1e18 scale */
-    uint256 public constant UNIT = 1e18;
     /** @notice Max value for BPS - 100% */
     uint256 public constant MAX_BPS = 10000;
     /** @notice Max value possible for an uint256 */
@@ -237,9 +235,9 @@ contract DullahanPod is ReentrancyGuard {
         // And deposit it in the Aave Pool
         address _aavePool = DullahanRegistry(registry).AAVE_POOL_V3();
         _collateral.safeIncreaseAllowance(_aavePool, amount);
-        IAavePool(_aavePool).supply(collateral, amount, address(this), 0);
+        IAavePool(_aavePool).supply(address(_collateral), amount, address(this), 0);
 
-        emit CollateralDeposited(collateral, amount);
+        emit CollateralDeposited(address(_collateral), amount);
     }
 
     /**
@@ -391,11 +389,6 @@ contract DullahanPod is ReentrancyGuard {
         // Withdraw the amount to be liquidated from the aave Pool
         // (Using MAX_UINT256 here will withdraw everything)
         IAavePool(DullahanRegistry(registry).AAVE_POOL_V3()).withdraw(collateral, amount, address(this));
-
-        // If the total collateral in the Pod is to be liquidated, send the full balance
-        if(amount == type(uint256).max) {
-            amount = IERC20(collateral).balanceOf(address(this));
-        }
 
         // Send the tokens to the liquidator (here the given receiver)
         IERC20(collateral).safeTransfer(receiver, amount);

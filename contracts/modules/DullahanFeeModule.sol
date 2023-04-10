@@ -24,8 +24,6 @@ contract DullahanFeeModule is IFeeModule, Owner {
 
     /** @notice 1e18 scale */
     uint256 public constant UNIT = 1e18;
-    /** @notice Max value for BPS - 100% */
-    uint256 public constant MAX_BPS = 10000;
 
     /** @notice Threshold ratio to apply the extra multiplier */
     uint256 public constant TRESHOLD = 0.75 ether;
@@ -94,7 +92,7 @@ contract DullahanFeeModule is IFeeModule, Owner {
         // If the Utilization Rate is over the Threshold, increase the fee per second
         // using the calculated multiplier
         if(utilRate >= TRESHOLD) {
-            uint256 multiplier = BASE_MULTIPLIER + (EXTRA_MULTIPLIER_STEP * (utilRate - TRESHOLD));
+            uint256 multiplier = BASE_MULTIPLIER + ((EXTRA_MULTIPLIER_STEP * (utilRate - TRESHOLD) / UNIT));
             currentFee = (currentFee * multiplier) / UNIT;
         }
     }
