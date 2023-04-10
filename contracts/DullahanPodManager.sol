@@ -392,6 +392,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         // In case a pod receives direct stkAAVE transfer, we want to track that received amount
         if(currentStkAaveBalance > pods[pod].rentedAmount) {
             uint256 balanceDiff = currentStkAaveBalance - pods[pod].rentedAmount;
+            pods[pod].rentedAmount += balanceDiff;
 
             // And notify the Vault of the balance increase
             DullahanVault(vault).notifyRentedAmount(pod, balanceDiff);
@@ -442,6 +443,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         // In case a pod receives direct stkAAVE transfer, we want to track that received amount
         if(currentStkAaveBalance > pods[pod].rentedAmount) {
             uint256 balanceDiff = currentStkAaveBalance - pods[pod].rentedAmount;
+            pods[pod].rentedAmount += balanceDiff;
 
             // And notify the Vault of the balance increase
             DullahanVault(vault).notifyRentedAmount(pod, balanceDiff);
@@ -571,6 +573,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         // In case a pod receives direct stkAAVE transfer, we want to track that received amount
         if(currentStkAaveBalance > pods[pod].rentedAmount) {
             uint256 balanceDiff = currentStkAaveBalance - pods[pod].rentedAmount;
+            pods[pod].rentedAmount += balanceDiff;
 
             // And notify the Vault of the balance increase
             DullahanVault(vault).notifyRentedAmount(pod, balanceDiff);
