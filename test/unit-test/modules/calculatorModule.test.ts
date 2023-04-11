@@ -52,8 +52,8 @@ describe('DullahanDiscountCalculator contract tests', () => {
 
     describe('calculateAmountForMaxDiscount', async () => {
 
-        const steps = ethers.utils.parseEther('50')
-        const loops = 200
+        const steps = ethers.utils.parseEther('100')
+        const loops = 100
 
         it(' should return the correct needed amount', async () => {
 

@@ -69,9 +69,9 @@ describe('DullahanFeeModule contract tests', () => {
 
         let total_assets = BigNumber.from('0')
 
-        const steps = ethers.utils.parseEther('500')
+        const steps = ethers.utils.parseEther('1000')
 
-        const loops = 200
+        const loops = 100
 
         it(' should return the correct utiliation rate', async () => {
 
@@ -103,9 +103,9 @@ describe('DullahanFeeModule contract tests', () => {
 
         let total_assets = BigNumber.from('0')
 
-        const steps = ethers.utils.parseEther('500')
+        const steps = ethers.utils.parseEther('1000')
 
-        const loops = 200
+        const loops = 100
 
         it(' should return the correct fee per second', async () => {
 

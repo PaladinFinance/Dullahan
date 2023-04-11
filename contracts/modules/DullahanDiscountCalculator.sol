@@ -6,7 +6,7 @@
 //╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═════╝ ╚═╝╚═╝  ╚═══╝
 
 pragma solidity 0.8.16;
-//SPDX-License-Identifier: MIT
+//SPDX-License-Identifier: BUSL-1.1
 
 import "../interfaces/IDiscountCalculator.sol";
 import {WadRayMath} from  "../utils/WadRayMath.sol";

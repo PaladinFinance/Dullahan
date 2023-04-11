@@ -31,7 +31,7 @@ async function main() {
     const stkAAVE = IERC20__factory.connect(STK_AAVE, hre.ethers.provider);
 
     const seed_deposit = ethers.utils.parseEther('0.001')
-    const reserve_ratio = BigNumber.from(100)
+    const reserve_ratio = BigNumber.from(500)
     const start_fee = BigNumber.from('270000000')
 
     const deployer = (await hre.ethers.getSigners())[0];

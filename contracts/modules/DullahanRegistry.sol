@@ -7,7 +7,7 @@
 
 
 pragma solidity 0.8.16;
-//SPDX-License-Identifier: MIT
+//SPDX-License-Identifier: BUSL-1.1
 
 import "../utils/Owner.sol";
 import {Errors} from "../utils/Errors.sol";
