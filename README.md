@@ -82,8 +82,7 @@ npm run deploy <path_to_deploy_script>
 
 ## Security & Audit
 
-
-...
+Dullahan was adited by Pessimistic : [Audit Report](https://github.com/PaladinFinance/Dullahan/blob/main/audit/Paladin%20Dullahan%20Security%20Analysis%20by%20Pessimistic.pdf)
 
 
 ## Ressources
