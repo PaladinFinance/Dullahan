@@ -566,7 +566,7 @@ describe('Dullahan full system tests - Goerli version', () => {
             const staking_topic = iface.getEventTopic('Staked')
             const staking_log = receipt.logs.filter(x => x.topics.indexOf(staking_topic) >= 0);
             const staking_events = staking_log.map((log) => (iface.parseLog(log)).args)
-            const stkAave_staked = staking_events.length != 0 ? staking_events[0].amount : 0
+            const stkAave_staked = staking_events.length != 0 ? staking_events[0].shares : 0
 
             const gho_per_stkAave = ethers.utils.parseEther('100')
 
@@ -796,7 +796,7 @@ describe('Dullahan full system tests - Goerli version', () => {
             const staking_topic = iface.getEventTopic('Staked')
             const staking_log = receipt.logs.filter(x => x.topics.indexOf(staking_topic) >= 0);
             const staking_events = staking_log.map((log) => (iface.parseLog(log)).args)
-            const stkAave_staked = staking_events.length != 0 ? staking_events[0].amount : 0
+            const stkAave_staked = staking_events.length != 0 ? staking_events[0].shares : 0
 
             const gho_per_stkAave = ethers.utils.parseEther('100')
 

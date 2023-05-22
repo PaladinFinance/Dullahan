@@ -611,7 +611,7 @@ describe('DullahanVault contract tests - Admin functions', () => {
             const topic = iface.getEventTopic('Staked')
             const staking_log = receipt.logs.filter(x => x.topics.indexOf(topic) >= 0);
             const staking_events = staking_log.map((log) => (iface.parseLog(log)).args)
-            const stkAave_claim = staking_events[0].amount
+            const stkAave_claim = staking_events[0].shares
             const stkAave_claim_reserve = stkAave_claim.mul(await vault.reserveRatio()).div(MAX_BPS)
             // --------------------------------------------------
 
@@ -680,7 +680,7 @@ describe('DullahanVault contract tests - Admin functions', () => {
             const topic = iface.getEventTopic('Staked')
             const staking_log = receipt.logs.filter(x => x.topics.indexOf(topic) >= 0);
             const staking_events = staking_log.map((log) => (iface.parseLog(log)).args)
-            const stkAave_claim = staking_events[0].amount
+            const stkAave_claim = staking_events[0].shares
             const stkAave_claim_reserve = stkAave_claim.mul(await vault.reserveRatio()).div(MAX_BPS)
             // --------------------------------------------------
 

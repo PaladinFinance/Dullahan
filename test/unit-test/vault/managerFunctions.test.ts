@@ -176,7 +176,7 @@ describe('DullahanVault contract tests - Pod Manager functions', () => {
             const topic = iface.getEventTopic('Staked')
             const staking_log = receipt.logs.filter(x => x.topics.indexOf(topic) >= 0);
             const staking_events = staking_log.map((log) => (iface.parseLog(log)).args)
-            const stkAave_claim = staking_events[0].amount
+            const stkAave_claim = staking_events[0].shares
             // --------------------------------------------------
 
             const new_vault_balance = await stkAave.balanceOf(vault.address)
@@ -447,7 +447,7 @@ describe('DullahanVault contract tests - Pod Manager functions', () => {
             const topic = iface.getEventTopic('Staked')
             const staking_log = receipt.logs.filter(x => x.topics.indexOf(topic) >= 0);
             const staking_events = staking_log.map((log) => (iface.parseLog(log)).args)
-            const stkAave_claim = staking_events[0].amount
+            const stkAave_claim = staking_events[0].shares
             // --------------------------------------------------
 
             const new_vault_balance = await stkAave.balanceOf(vault.address)
@@ -506,7 +506,7 @@ describe('DullahanVault contract tests - Pod Manager functions', () => {
             const topic = iface.getEventTopic('Staked')
             const staking_log = receipt.logs.filter(x => x.topics.indexOf(topic) >= 0);
             const staking_events = staking_log.map((log) => (iface.parseLog(log)).args)
-            const stkAave_claim = staking_events[0].amount
+            const stkAave_claim = staking_events[0].shares
             // --------------------------------------------------
 
             const new_vault_balance = await stkAave.balanceOf(vault.address)

@@ -898,7 +898,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             const claim_events = claim_log.map((log) => (iface.parseLog(log)).args)
             const staking_events = staking_log.map((log) => (iface.parseLog(log)).args)
             const aave_claim = claim_events[0].amount
-            const stkAave_staked = staking_events[0].amount
+            const stkAave_staked = staking_events[0].shares
 
             expect(stkAave_staked).to.be.gt(0)
             expect(await stkAave.balanceOf(pod.address)).to.be.eq(prev_pod_balance.add(stkAave_staked))
@@ -930,6 +930,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             await expect(update_tx).to.emit(stkAave_staking, 'Staked').withArgs(
                 pod.address,
                 pod.address,
+                stkAave_staked,
                 stkAave_staked
             );
 
@@ -952,7 +953,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             const staking_topic = iface.getEventTopic('Staked')
             const staking_log = receipt.logs.filter(x => x.topics.indexOf(staking_topic) >= 0);
             const staking_events = staking_log.map((log) => (iface.parseLog(log)).args)
-            const stkAave_staked = staking_events[0].amount
+            const stkAave_staked = staking_events[0].shares
 
             expect(await stkAave.balanceOf(pod.address)).to.be.eq(prev_pod_balance.add(stkAave_staked))
 
@@ -1351,7 +1352,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             const staking_topic = iface.getEventTopic('Staked')
             const staking_log = receipt.logs.filter(x => x.topics.indexOf(staking_topic) >= 0);
             const staking_events = staking_log.map((log) => (iface.parseLog(log)).args)
-            const stkAave_staked = staking_events[0].amount
+            const stkAave_staked = staking_events[0].shares
 
             const new_pod_balance = await stkAave.balanceOf(pod.address)
 
@@ -1652,7 +1653,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             const staking_topic = iface.getEventTopic('Staked')
             const staking_log = receipt.logs.filter(x => x.topics.indexOf(staking_topic) >= 0);
             const staking_events = staking_log.map((log) => (iface.parseLog(log)).args)
-            const stkAave_staked = staking_events[0].amount
+            const stkAave_staked = staking_events[0].shares
 
             const new_pod_balance = await stkAave.balanceOf(pod.address)
 
@@ -1696,7 +1697,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             const staking_topic = iface.getEventTopic('Staked')
             const staking_log = receipt.logs.filter(x => x.topics.indexOf(staking_topic) >= 0);
             const staking_events = staking_log.map((log) => (iface.parseLog(log)).args)
-            const stkAave_staked = staking_events[0].amount
+            const stkAave_staked = staking_events[0].shares
 
             const new_pod_balance = await stkAave.balanceOf(pod.address)
 

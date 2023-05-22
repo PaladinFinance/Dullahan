@@ -500,6 +500,7 @@ describe('DullahanZapDeposit contract tests', () => {
             await expect(deposit_tx).to.emit(stkAave_staking, 'Staked').withArgs(
                 zap.address,
                 zap.address,
+                user3_deposit,
                 user3_deposit
             );
 

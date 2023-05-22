@@ -1167,7 +1167,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
             const topic = iface.getEventTopic('Staked')
             const staking_log = receipt.logs.filter(x => x.topics.indexOf(topic) >= 0);
             const staking_events = staking_log.map((log) => (iface.parseLog(log)).args)
-            const stkAave_claim = staking_events[0].amount
+            const stkAave_claim = staking_events[0].shares
             const stkAave_claim_reserve = stkAave_claim.mul(await vault.reserveRatio()).div(MAX_BPS)
             const user_claim_share = stkAave_claim.sub(stkAave_claim_reserve).mul(prev_user_scaled_balance).div(prev_total_scaled_supply)
             // --------------------------------------------------
@@ -1594,7 +1594,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
             const topic = iface.getEventTopic('Staked')
             const staking_log = receipt.logs.filter(x => x.topics.indexOf(topic) >= 0);
             const staking_events = staking_log.map((log) => (iface.parseLog(log)).args)
-            const stkAave_claim = staking_events[0].amount
+            const stkAave_claim = staking_events[0].shares
             const stkAave_claim_reserve = stkAave_claim.mul(await vault.reserveRatio()).div(MAX_BPS)
             const user_claim_share = stkAave_claim.sub(stkAave_claim_reserve).mul(prev_user_scaled_balance).div(prev_total_scaled_supply)
             // --------------------------------------------------
@@ -1940,7 +1940,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
             const claim_events = claim_log.map((log) => (iface.parseLog(log)).args)
             const staking_events = staking_log.map((log) => (iface.parseLog(log)).args)
             const aave_claim = claim_events[0].amount
-            const stkAave_staked = staking_events[0].amount
+            const stkAave_staked = staking_events[0].shares
 
             expect(new_vault_balance).to.be.eq(prev_vault_balance.add(stkAave_staked))
 
@@ -1975,6 +1975,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
             await expect(update_tx).to.emit(stkAave_staking, 'Staked').withArgs(
                 vault.address,
                 vault.address,
+                stkAave_staked,
                 stkAave_staked
             );
 
@@ -2015,7 +2016,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
             const extra_Aave = ethers.utils.parseEther('50')
 
             await stkAave_staking.connect(admin).cooldown()
-            await advanceTime(864000)
+            await advanceTime(864000 * 2)
             await stkAave_staking.connect(admin).redeem(admin.address, extra_Aave)
             await aave.connect(admin).transfer(vault.address, extra_Aave)
 
@@ -2040,7 +2041,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
             const claim_events = claim_log.map((log) => (iface.parseLog(log)).args)
             const staking_events = staking_log.map((log) => (iface.parseLog(log)).args)
             const aave_claim = claim_events[0].amount
-            const stkAave_staked = staking_events[0].amount
+            const stkAave_staked = staking_events[0].shares
 
             expect(stkAave_staked).to.be.eq(aave_claim.add(extra_Aave))
 
@@ -2077,6 +2078,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
             await expect(update_tx).to.emit(stkAave_staking, 'Staked').withArgs(
                 vault.address,
                 vault.address,
+                stkAave_staked,
                 stkAave_staked
             );
 
@@ -2110,6 +2112,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
             await expect(deposit_tx).to.emit(stkAave_staking, 'Staked').withArgs(
                 vault.address,
                 vault.address,
+                claimed_amount,
                 claimed_amount
             );
 
@@ -2136,6 +2139,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
             await expect(withdraw_tx).to.emit(stkAave_staking, 'Staked').withArgs(
                 vault.address,
                 vault.address,
+                claimed_amount2,
                 claimed_amount2
             );
 
