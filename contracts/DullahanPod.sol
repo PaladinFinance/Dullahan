@@ -503,6 +503,12 @@ contract DullahanPod is ReentrancyGuard {
         // can be freed & pull back by the Vaut
         if(!_manager.freeStkAave(address(this))) revert Errors.FreeingStkAaveFailed();
 
+        // Send back any remaining GHO from in the Pod to the caller
+        uint256 remainingGho = _gho.balanceOf(address(this));
+        if(remainingGho > 0) {
+            _gho.safeTransfer(msg.sender, remainingGho);
+        }
+
         emit GhoRepayed(amountToRepay);
 
         return true;
