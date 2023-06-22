@@ -554,6 +554,60 @@ describe('DullahanPodManager contract tests - Pods only functions', () => {
             .withArgs(pod2.address, pay_fees_amount2);
 
         });
+
+        it(' should process the reserve if it is more than treshold', async () => {
+
+            const bigger_pay_fees_amount = ethers.utils.parseEther('110')
+
+            await advanceTime(WEEK.mul(100).toNumber())
+
+            await manager.connect(admin).updatePodState(pod.address)
+
+            const protocol_fee_ratio = await manager.protocolFeeRatio()
+
+            const prev_reserve = await manager.reserveAmount()
+            const expected_updated_reserve_amount = prev_reserve.add(bigger_pay_fees_amount)
+
+            const prev_owed_fees = (await manager.pods(pod.address)).accruedFees
+            const prev_chest_balance = await gho.balanceOf(feeChest.address)
+            const prev_staking_balance = await gho.balanceOf(staking.address)
+
+            await gho.connect(admin).mint(manager.address, bigger_pay_fees_amount)
+            const tx = await pod.connect(podOwner).payFee(bigger_pay_fees_amount)
+
+            const new_reserve = await manager.reserveAmount()
+
+            const new_owed_fees = (await manager.pods(pod.address)).accruedFees
+
+            const new_manager_balance = await gho.balanceOf(manager.address)
+            const new_chest_balance = await gho.balanceOf(feeChest.address)
+            const new_staking_balance = await gho.balanceOf(staking.address)
+
+            const expected_protocol_fees = expected_updated_reserve_amount.mul(protocol_fee_ratio).div(MAX_BPS)
+            const expected_total_rewards = expected_updated_reserve_amount.sub(expected_protocol_fees)
+            
+            expect(new_reserve).to.be.eq(0)
+            expect(new_manager_balance).to.be.eq(0)
+
+            expect(new_chest_balance).to.be.eq(prev_chest_balance.add(expected_protocol_fees))
+            expect(new_staking_balance).to.be.eq(prev_staking_balance.add(expected_total_rewards))
+
+
+            expect(new_owed_fees).to.be.eq(prev_owed_fees.sub(bigger_pay_fees_amount))
+
+            await expect(tx).to.emit(manager, "PaidFees")
+            .withArgs(pod.address, bigger_pay_fees_amount);
+
+            await expect(tx).to.emit(gho, "Transfer")
+            .withArgs(manager.address, feeChest.address, expected_protocol_fees);
+
+            await expect(tx).to.emit(gho, "Transfer")
+            .withArgs(manager.address, staking.address, expected_total_rewards);
+
+            await expect(tx).to.emit(manager, "ReserveProcessed")
+            .withArgs(expected_total_rewards);
+
+        });
         
         it(' should only be callable by valid Pods', async () => {
 
@@ -568,6 +622,7 @@ describe('DullahanPodManager contract tests - Pods only functions', () => {
     describe('notifyMintingFee', async () => {
 
         const minting_fee = ethers.utils.parseEther('25')
+        const bigger_minting_fee = ethers.utils.parseEther('125')
         
         it(' should add the notified amount to the reserve correctly (& emit correct Event)', async () => {
 
@@ -587,7 +642,7 @@ describe('DullahanPodManager contract tests - Pods only functions', () => {
         it(' should allow multiple Pods to notify', async () => {
 
             const minting_fee2 = ethers.utils.parseEther('13')
-            const minting_fee3 = ethers.utils.parseEther('110')
+            const minting_fee3 = ethers.utils.parseEther('50')
 
             const start_reserve = await manager.reserveAmount()
 
@@ -611,6 +666,45 @@ describe('DullahanPodManager contract tests - Pods only functions', () => {
 
             await expect(tx3).to.emit(manager, "MintingFees")
             .withArgs(pod3.address, minting_fee3);
+
+        });
+
+        it(' should process the reserve if it is more than treshold', async () => {
+
+            const protocol_fee_ratio = await manager.protocolFeeRatio()
+
+            const prev_reserve = await manager.reserveAmount()
+            const expected_updated_reserve_amount = prev_reserve.add(bigger_minting_fee)
+
+            const prev_chest_balance = await gho.balanceOf(feeChest.address)
+            const prev_staking_balance = await gho.balanceOf(staking.address)
+
+            await gho.connect(admin).mint(manager.address, bigger_minting_fee)
+            const tx = await pod.connect(podOwner).payMintFee(bigger_minting_fee)
+
+            const new_reserve = await manager.reserveAmount()
+
+            const new_manager_balance = await gho.balanceOf(manager.address)
+            const new_chest_balance = await gho.balanceOf(feeChest.address)
+            const new_staking_balance = await gho.balanceOf(staking.address)
+
+            const expected_protocol_fees = expected_updated_reserve_amount.mul(protocol_fee_ratio).div(MAX_BPS)
+            const expected_total_rewards = expected_updated_reserve_amount.sub(expected_protocol_fees)
+            
+            expect(new_reserve).to.be.eq(0)
+            expect(new_manager_balance).to.be.eq(0)
+
+            expect(new_chest_balance).to.be.eq(prev_chest_balance.add(expected_protocol_fees))
+            expect(new_staking_balance).to.be.eq(prev_staking_balance.add(expected_total_rewards))
+
+            await expect(tx).to.emit(gho, "Transfer")
+            .withArgs(manager.address, feeChest.address, expected_protocol_fees);
+
+            await expect(tx).to.emit(gho, "Transfer")
+            .withArgs(manager.address, staking.address, expected_total_rewards);
+
+            await expect(tx).to.emit(manager, "ReserveProcessed")
+            .withArgs(expected_total_rewards);
 
         });
         

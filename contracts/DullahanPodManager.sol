@@ -112,6 +112,8 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
     /** @notice Total amount set as reserve (holding Vault renting fees) */
     uint256 public reserveAmount;
+    /** @notice Min amount in the reserve to be processed */
+    uint256 public processThreshold = 100e18;
 
 
     // Events
@@ -159,6 +161,8 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     event ProtocolFeeRatioUpdated(uint256 oldRatio, uint256 newRatio);
     /** @notice Event emitted when the Extra Liquidation Ratio is updated */
     event ExtraLiquidationRatioUpdated(uint256 oldRatio, uint256 newRatio);
+    /** @notice Event emitted when the Mint Fee Ratio is updated */
+    event ProcessThresholdUpdated(uint256 oldThreshold, uint256 newThreshold);
 
 
     // Modifers
@@ -488,6 +492,11 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         _pod.accruedFees = 0;
         reserveAmount += paidFees;
 
+        // Process the reserve
+        if(reserveAmount >= processThreshold) {
+            _processReserve();
+        }
+
         // Pull the GHO fees from the liquidator
         IERC20(DullahanRegistry(registry).GHO()).safeTransferFrom(liquidator, address(this), paidFees);
 
@@ -527,27 +536,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     * @return bool : Success
     */
     function processReserve() external nonReentrant whenNotPaused returns(bool) {
-        if(!_updateGlobalState()) revert Errors.FailStateUpdate();
-        uint256 currentReserveAmount = reserveAmount;
-        if(currentReserveAmount == 0) return true;
-
-        // Reset the Reserve
-        reserveAmount = 0;
-
-        address _ghoAddress = DullahanRegistry(registry).GHO();
-        IERC20 _gho = IERC20(_ghoAddress);
-        // Take the DAO fees based on current amount to process
-        uint256 protocolFees = (currentReserveAmount * protocolFeeRatio) / MAX_BPS;
-        _gho.safeTransfer(protocolFeeChest, protocolFees);
-
-        // And send the rest of the fees to the Staking module to be queued for distribution
-        uint256 stakingRewardsAmount = currentReserveAmount - protocolFees;
-        IDullahanRewardsStaking(rewardsStaking).queueRewards(_ghoAddress, stakingRewardsAmount);
-        _gho.safeTransfer(rewardsStaking, stakingRewardsAmount);
-
-        emit ReserveProcessed(stakingRewardsAmount);
-
-        return true;
+        return _processReserve();
     }
 
 
@@ -631,6 +620,11 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         // And set the received fees as Reserve
         reserveAmount += feeAmount;
 
+        // Process the reserve
+        if(reserveAmount >= processThreshold) {
+            _processReserve();
+        }
+
         emit PaidFees(_pod, feeAmount);
     }
 
@@ -643,6 +637,11 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
         // Set the received minting fees as Reserve
         reserveAmount += feeAmount;
+
+        // Process the reserve
+        if(reserveAmount >= processThreshold) {
+            _processReserve();
+        }
 
         emit MintingFees(_pod, feeAmount);
     }
@@ -711,6 +710,34 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         if(_pod.rentedAmount != 0 && _oldPodIndex != _lastUpdatedIndex){
             _pod.accruedFees += ((_lastUpdatedIndex - _oldPodIndex) * _pod.rentedAmount) / UNIT;
         }
+
+        return true;
+    }
+
+    /**
+    * @dev Send the Reserve to the staking contract to be queued for distribution & take a part as protocol fees
+    * @return bool : Success
+    */
+    function _processReserve() internal returns(bool) {
+        if(!_updateGlobalState()) revert Errors.FailStateUpdate();
+        uint256 currentReserveAmount = reserveAmount;
+        if(currentReserveAmount == 0) return true;
+
+        // Reset the Reserve
+        reserveAmount = 0;
+
+        address _ghoAddress = DullahanRegistry(registry).GHO();
+        IERC20 _gho = IERC20(_ghoAddress);
+        // Take the DAO fees based on current amount to process
+        uint256 protocolFees = (currentReserveAmount * protocolFeeRatio) / MAX_BPS;
+        _gho.safeTransfer(protocolFeeChest, protocolFees);
+
+        // And send the rest of the fees to the Staking module to be queued for distribution
+        uint256 stakingRewardsAmount = currentReserveAmount - protocolFees;
+        IDullahanRewardsStaking(rewardsStaking).queueRewards(_ghoAddress, stakingRewardsAmount);
+        _gho.safeTransfer(rewardsStaking, stakingRewardsAmount);
+
+        emit ReserveProcessed(stakingRewardsAmount);
 
         return true;
     }
@@ -888,6 +915,19 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         extraLiquidationRatio = newRatio;
 
         emit ExtraLiquidationRatioUpdated(oldRatio, newRatio);
+    }
+
+    /**
+    * @notice Uodate the process threshold parameter
+    * @param newThreshold New treshold value
+    */
+    function updateProcessThreshold(uint256 newThreshold) external onlyOwner {
+        if(newThreshold < 10e18) revert Errors.InvalidParameter();
+
+        uint256 oldThreshold = processThreshold;
+        processThreshold = newThreshold;
+
+        emit ProcessThresholdUpdated(oldThreshold, newThreshold);
     }
 
 

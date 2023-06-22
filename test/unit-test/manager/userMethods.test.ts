@@ -1019,11 +1019,13 @@ describe('DullahanPodManager contract tests - user functions', () => {
 
         beforeEach(async () => {
 
+            await manager.connect(admin).updateProcessThreshold(ethers.utils.parseEther('5000'))
+
             const stkAave_vault_balance = ethers.utils.parseEther('1000')
             await stkAave.connect(admin).transfer(vault.address, stkAave_vault_balance)
 
-            const previous_debt = ethers.utils.parseEther('3500')
-            const previous_debt2 = ethers.utils.parseEther('1500')
+            const previous_debt = ethers.utils.parseEther('350')
+            const previous_debt2 = ethers.utils.parseEther('150')
 
             await feeModule.connect(admin).setFeePerSec(
                 ethers.utils.parseEther('0.00005')

@@ -25,15 +25,15 @@ with open(os.path.dirname(os.path.realpath(__file__)) + "/../../abi/PodManager.j
 
 manager = w3.eth.contract(abi=Manager_ABI, address=MANAGER_ADDRESS)
 
-tx_dict = manager.functions.processReserve().buildTransaction({
+tx_dict = manager.functions.processReserve().build_transaction({
     'from' : user_acc.address,
-    'nonce' : w3.eth.getTransactionCount(user_acc.address),
+    'nonce' : w3.eth.get_transaction_count(user_acc.address),
 })
-tx = w3.eth.account.signTransaction(tx_dict, user_acc.key)
-result = w3.eth.sendRawTransaction(tx.rawTransaction)
+tx = w3.eth.account.sign_transaction(tx_dict, user_acc.key)
+result = w3.eth.send_raw_transaction(tx.rawTransaction)
 print('Tx hash : ' + str(result.hex()))
 time.sleep(5)
-txReceipt = w3.eth.waitForTransactionReceipt(result)
+txReceipt = w3.eth.wait_for_fransaction_receipt(result)
 print()
 print("Result : " + ("Success" if txReceipt.status == 1 else "Failed"))
 print()

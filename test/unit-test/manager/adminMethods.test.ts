@@ -665,6 +665,45 @@ describe('DullahanPodManager contract tests - Admin functions', () => {
 
     });
 
+    describe('updateProcessThreshold', async () => {
+
+        const new_threshold = ethers.utils.parseEther('550')
+        
+        it(' should update the storage correctly (& emit Event)', async () => {
+
+            const old_threshold = await manager.processThreshold()
+            
+            const update_tx = await manager.connect(admin).updateProcessThreshold(new_threshold)
+
+            expect(await manager.processThreshold()).to.be.eq(new_threshold)
+
+            await expect(update_tx).to.emit(manager, "ProcessThresholdUpdated")
+            .withArgs(old_threshold, new_threshold);
+    
+        });
+        
+        it(' should fail if given an invalid parameter', async () => {
+            
+            await expect(
+                manager.connect(admin).updateProcessThreshold(ethers.utils.parseEther('1'))
+            ).to.be.revertedWith('InvalidParameter')
+    
+        });
+        
+        it(' should only be callable by admin', async () => {
+            
+            await expect(
+                manager.connect(otherUser).updateProcessThreshold(new_threshold)
+            ).to.be.revertedWith('Ownable: caller is not the owner')
+
+            await expect(
+                manager.connect(podOwner).updateProcessThreshold(new_threshold)
+            ).to.be.revertedWith('Ownable: caller is not the owner')
+    
+        });
+
+    });
+
     describe('updatePodRegistry', async () => {
 
         let pod: MockPod
