@@ -113,7 +113,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     /** @notice Total amount set as reserve (holding Vault renting fees) */
     uint256 public reserveAmount;
     /** @notice Min amount in the reserve to be processed */
-    uint256 public processThreshold = 100e18;
+    uint256 public processThreshold = 500e18;
 
 
     // Events
