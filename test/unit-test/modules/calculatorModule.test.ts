@@ -45,15 +45,15 @@ describe('DullahanDiscountCalculator contract tests', () => {
         expect(module.address).to.properAddress
 
         expect(await module.GHO_DISCOUNTED_PER_DISCOUNT_TOKEN()).to.be.eq(ethers.utils.parseEther('100'))
-        expect(await module.MIN_DISCOUNT_TOKEN_BALANCE()).to.be.eq(ethers.utils.parseEther('1'))
+        expect(await module.MIN_DISCOUNT_TOKEN_BALANCE()).to.be.eq(ethers.utils.parseEther('0.001'))
         expect(await module.MIN_DEBT_TOKEN_BALANCE()).to.be.eq(ethers.utils.parseEther('1'))
 
     });
 
     describe('calculateAmountForMaxDiscount', async () => {
 
-        const steps = ethers.utils.parseEther('100')
-        const loops = 100
+        const steps = ethers.utils.parseEther('0.1')
+        const loops = 150
 
         it(' should return the correct needed amount', async () => {
 
@@ -64,7 +64,9 @@ describe('DullahanDiscountCalculator contract tests', () => {
                 let total_debt_amount = steps.mul(i)
 
                 let expected_amount = total_debt_amount.mul(UNIT).add(gho_per_stkAave.div(2)).div(gho_per_stkAave)
-                if(expected_amount.lt(ethers.utils.parseEther('1'))) expected_amount = BigNumber.from(0)
+                if(expected_amount.lt(ethers.utils.parseEther('0.001')) || total_debt_amount.lt(ethers.utils.parseEther('1'))) {
+                    expected_amount = BigNumber.from(0)
+                }
 
                 expect(await module.calculateAmountForMaxDiscount(total_debt_amount)).to.be.eq(expected_amount)
             }
@@ -76,8 +78,8 @@ describe('DullahanDiscountCalculator contract tests', () => {
             expect(await module.calculateAmountForMaxDiscount(0)).to.be.eq(0)
 
             // MIN_DISCOUNT_TOKEN_BALANCE threshold
-            expect(await module.calculateAmountForMaxDiscount(ethers.utils.parseEther('1.5'))).to.be.eq(0)
-            expect(await module.calculateAmountForMaxDiscount(ethers.utils.parseEther('75'))).to.be.eq(0)
+            expect(await module.calculateAmountForMaxDiscount(ethers.utils.parseEther('0.001'))).to.be.eq(0)
+            expect(await module.calculateAmountForMaxDiscount(ethers.utils.parseEther('0.075'))).to.be.eq(0)
 
         });
 

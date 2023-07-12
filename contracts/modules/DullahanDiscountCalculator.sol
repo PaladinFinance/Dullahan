@@ -37,7 +37,7 @@ contract DullahanDiscountCalculator is IDiscountCalculator {
      * @dev Minimum balance amount of discount token to be entitled to a discount
      * Expressed with the number of decimals of the discount token
      */
-    uint256 public constant MIN_DISCOUNT_TOKEN_BALANCE = 1e18;
+    uint256 public constant MIN_DISCOUNT_TOKEN_BALANCE = 1e15;
 
     /**
      * @dev Minimum balance amount of debt token to be entitled to a discount
