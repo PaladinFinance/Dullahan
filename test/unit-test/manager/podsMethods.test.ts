@@ -484,13 +484,13 @@ describe('DullahanPodManager contract tests - Pods only functions', () => {
 
     describe('notifyPayFee', async () => {
 
-        const stkAave_vault_balance = ethers.utils.parseEther('1000')
+        const stkAave_vault_balance = ethers.utils.parseEther('10000')
 
-        const previous_debt = ethers.utils.parseEther('3500')
-        const previous_debt2 = ethers.utils.parseEther('1500')
+        const previous_debt = ethers.utils.parseEther('35000')
+        const previous_debt2 = ethers.utils.parseEther('15000')
 
-        const pay_fees_amount = ethers.utils.parseEther('4.55')
-        const pay_fees_amount2 = ethers.utils.parseEther('2.5')
+        const pay_fees_amount = ethers.utils.parseEther('45.5')
+        const pay_fees_amount2 = ethers.utils.parseEther('25')
 
         beforeEach(async () => {
             await stkAave.connect(admin).transfer(vault.address, stkAave_vault_balance)
@@ -557,7 +557,7 @@ describe('DullahanPodManager contract tests - Pods only functions', () => {
 
         it(' should process the reserve if it is more than treshold', async () => {
 
-            const bigger_pay_fees_amount = ethers.utils.parseEther('110')
+            const bigger_pay_fees_amount = ethers.utils.parseEther('1100')
 
             await advanceTime(WEEK.mul(100).toNumber())
 
@@ -621,8 +621,8 @@ describe('DullahanPodManager contract tests - Pods only functions', () => {
 
     describe('notifyMintingFee', async () => {
 
-        const minting_fee = ethers.utils.parseEther('25')
-        const bigger_minting_fee = ethers.utils.parseEther('125')
+        const minting_fee = ethers.utils.parseEther('250')
+        const bigger_minting_fee = ethers.utils.parseEther('750')
         
         it(' should add the notified amount to the reserve correctly (& emit correct Event)', async () => {
 
