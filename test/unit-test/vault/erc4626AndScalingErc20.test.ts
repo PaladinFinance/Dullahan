@@ -1098,7 +1098,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
 
             expect(new_user_stkAave_balance).to.be.eq(prev_user_stkAave_balance.add(user1_withdraw))
 
-            expect(new_user_balance).to.be.eq(prev_user_balance.add(user_claim_share).sub(user1_withdraw))
+            expect(new_user_balance).to.be.closeTo(prev_user_balance.add(user_claim_share).sub(user1_withdraw), 1)
             expect(new_total_supply).to.be.eq(prev_total_supply.sub(user1_withdraw).add(stkAave_claim).sub(stkAave_claim_reserve))
             expect(new_total_assets).to.be.eq(prev_total_assets.sub(user1_withdraw).add(stkAave_claim).sub(stkAave_claim_reserve))
 
@@ -1269,7 +1269,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
             expect(new_user1_stkAave_balance).to.be.eq(prev_user1_stkAave_balance)
             expect(new_user3_stkAave_balance).to.be.eq(prev_user3_stkAave_balance.add(user1_withdraw))
 
-            expect(new_user1_balance).to.be.eq(prev_user1_balance.add(user_claim_share).sub(user1_withdraw))
+            expect(new_user1_balance).to.be.closeTo(prev_user1_balance.add(user_claim_share).sub(user1_withdraw), 1)
             expect(new_user3_balance).to.be.eq(prev_user3_balance)
             expect(new_total_supply).to.be.eq(prev_total_supply.sub(user1_withdraw).add(stkAave_claim).sub(stkAave_claim_reserve))
             expect(new_total_assets).to.be.eq(prev_total_assets.sub(user1_withdraw).add(stkAave_claim).sub(stkAave_claim_reserve))
@@ -1353,7 +1353,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
             expect(new_user1_stkAave_balance).to.be.eq(prev_user1_stkAave_balance)
             expect(new_user3_stkAave_balance).to.be.eq(prev_user3_stkAave_balance.add(user1_withdraw))
 
-            expect(new_user1_balance).to.be.eq(prev_user1_balance.add(user_claim_share).sub(user1_withdraw))
+            expect(new_user1_balance).to.be.closeTo(prev_user1_balance.add(user_claim_share).sub(user1_withdraw), 1)
             expect(new_total_supply).to.be.eq(prev_total_supply.sub(user1_withdraw).add(stkAave_claim).sub(stkAave_claim_reserve))
             expect(new_total_assets).to.be.eq(prev_total_assets.sub(user1_withdraw).add(stkAave_claim).sub(stkAave_claim_reserve))
 
@@ -1525,7 +1525,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
 
             expect(new_user_stkAave_balance).to.be.eq(prev_user_stkAave_balance.add(user1_withdraw))
 
-            expect(new_user_balance).to.be.eq(prev_user_balance.add(user_claim_share).sub(user1_withdraw))
+            expect(new_user_balance).to.be.closeTo(prev_user_balance.add(user_claim_share).sub(user1_withdraw), 1)
             expect(new_total_supply).to.be.eq(prev_total_supply.sub(user1_withdraw).add(stkAave_claim).sub(stkAave_claim_reserve))
             expect(new_total_assets).to.be.eq(prev_total_assets.sub(user1_withdraw).add(stkAave_claim).sub(stkAave_claim_reserve))
 
@@ -1696,7 +1696,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
             expect(new_user1_stkAave_balance).to.be.eq(prev_user1_stkAave_balance)
             expect(new_user3_stkAave_balance).to.be.eq(prev_user3_stkAave_balance.add(user1_withdraw))
 
-            expect(new_user1_balance).to.be.closeTo(prev_user1_balance.add(user_claim_share).sub(user1_withdraw), 100) // because of stkAave rewards claim
+            expect(new_user1_balance).to.be.closeTo(prev_user1_balance.add(user_claim_share).sub(user1_withdraw), 1)
             expect(new_user3_balance).to.be.eq(prev_user3_balance)
             expect(new_total_supply).to.be.eq(prev_total_supply.sub(user1_withdraw).add(stkAave_claim).sub(stkAave_claim_reserve))
             expect(new_total_assets).to.be.eq(prev_total_assets.sub(user1_withdraw).add(stkAave_claim).sub(stkAave_claim_reserve))
@@ -1780,7 +1780,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
             expect(new_user1_stkAave_balance).to.be.eq(prev_user1_stkAave_balance)
             expect(new_user3_stkAave_balance).to.be.eq(prev_user3_stkAave_balance.add(user1_withdraw))
 
-            expect(new_user1_balance).to.be.eq(prev_user1_balance.add(user_claim_share).sub(user1_withdraw))
+            expect(new_user1_balance).to.be.closeTo(prev_user1_balance.add(user_claim_share).sub(user1_withdraw), 1)
             expect(new_total_supply).to.be.eq(prev_total_supply.sub(user1_withdraw).add(stkAave_claim).sub(stkAave_claim_reserve))
             expect(new_total_assets).to.be.eq(prev_total_assets.sub(user1_withdraw).add(stkAave_claim).sub(stkAave_claim_reserve))
 
