@@ -34,7 +34,6 @@ import {
     AAVE,
     STK_AAVE,
     GHO,
-    //aGHO,
     DEBT_GHO,
     AAVE_POOL,
     AAVE_REWARD_CONTROLLER,
@@ -105,7 +104,6 @@ describe('Dullahan full system tests - Mainnet version', () => {
     let stkAave_voting_power: IGovernancePowerDelegationToken
 
     let gho: IERC20
-    //let aGho: IERC20
     let debtGho: IERC20
 
     let token1: IERC20
@@ -142,7 +140,6 @@ describe('Dullahan full system tests - Mainnet version', () => {
         stkAave_voting_power = IGovernancePowerDelegationToken__factory.connect(STK_AAVE, provider);
 
         gho = IERC20__factory.connect(GHO, provider);
-        //aGho = IERC20__factory.connect(aGHO, provider);
         debtGho = IERC20__factory.connect(DEBT_GHO, provider);
 
         token1 = IERC20__factory.connect(TEST_TOKEN_1, provider);
@@ -506,21 +503,15 @@ describe('Dullahan full system tests - Mainnet version', () => {
             await manager.connect(podOwner).updatePodState(pod.address)
 
             const previous_owed_fees = await manager.podOwedFees(pod.address)
-            const previous_pod_debt = await debtGho.balanceOf(pod.address)
 
             const prev_reserve = await manager.reserveAmount()
             const prev_accrued_fees = (await manager.pods(pod.address)).accruedFees
 
             const previous_pod_stkAave_balance = await stkAave.balanceOf(pod.address)
 
-            const previous_pod_rented_amount = (await manager.pods(pod.address)).rentedAmount
-
             const prev_pod_state = await manager.pods(pod.address)
 
             const repay_tx = await pod.connect(podOwner).repayGho(repay_amount)
-
-            const tx_block = (await repay_tx).blockNumber
-            const tx_timestamp = BigNumber.from((await ethers.provider.getBlock((await repay_tx).blockNumber || 0)).timestamp)
 
             const new_owed_fees = await manager.podOwedFees(pod.address)
             const new_pod_debt = await debtGho.balanceOf(pod.address)
@@ -537,7 +528,6 @@ describe('Dullahan full system tests - Mainnet version', () => {
             const new_pod_stkAave_balance = await stkAave.balanceOf(pod.address)
 
             expect(new_owed_fees).to.be.eq(0)
-            //expect(new_pod_debt).to.be.eq(previous_pod_debt.sub(expected_debt_repayed))
 
             await expect(repay_tx).to.emit(gho, "Transfer")
             .withArgs(podOwner.address, pod.address, repay_amount);
@@ -545,11 +535,8 @@ describe('Dullahan full system tests - Mainnet version', () => {
             await expect(repay_tx).to.emit(gho, "Transfer")
             .withArgs(pod.address, manager.address, total_fees_repayed);
 
-            /*await expect(repay_tx).to.emit(gho, "Transfer")
-            .withArgs(pod.address, aavePool.address, expected_debt_repayed);*/
-
-            /*await expect(repay_tx).to.emit(debtGho, "Transfer")
-            .withArgs(pod.address, ethers.constants.AddressZero, expected_debt_repayed);*/
+            await expect(repay_tx).to.emit(debtGho, "Transfer")
+            .withArgs(pod.address, ethers.constants.AddressZero, expected_debt_repayed);
 
             await expect(repay_tx).to.emit(pod, "GhoRepayed")
             .withArgs(repay_amount);
@@ -612,7 +599,6 @@ describe('Dullahan full system tests - Mainnet version', () => {
 
         const deposit_amount = ethers.utils.parseEther('1500')
         const borrow_amount = ethers.utils.parseEther('700')
-        const repay_amount = ethers.utils.parseEther('150')
         const withdraw_amount = ethers.utils.parseEther('200')
 
         let pod: DullahanPod
@@ -650,18 +636,13 @@ describe('Dullahan full system tests - Mainnet version', () => {
             const previous_user_balance = await token1.balanceOf(podOwner.address)
             const previous_market_balance = await token1.balanceOf(aToken1.address)
 
-            const previous_pod_aToken_balance = await aToken1.balanceOf(pod.address)
-
             const withdraw_tx = await pod.connect(podOwner).withdrawCollateral(withdraw_amount, podOwner.address)
 
-            const tx_block = (await withdraw_tx).blockNumber
             const tx_timestamp = BigNumber.from((await ethers.provider.getBlock((await withdraw_tx).blockNumber || 0)).timestamp)
 
             const new_pod_balance = await token1.balanceOf(pod.address)
             const new_user_balance = await token1.balanceOf(podOwner.address)
             const new_market_balance = await token1.balanceOf(aToken1.address)
-
-            const new_pod_aToken_balance = await aToken1.balanceOf(pod.address, { blockTag: tx_block })
 
             expect(new_pod_balance).to.be.eq(previous_pod_balance)
             expect(new_user_balance).to.be.eq(previous_user_balance.add(withdraw_amount))
@@ -732,7 +713,6 @@ describe('Dullahan full system tests - Mainnet version', () => {
             await manager.connect(podOwner).updatePodState(pod.address)
 
             const previous_owed_fees = await manager.podOwedFees(pod.address)
-            const previous_pod_debt = await debtGho.balanceOf(pod.address)
 
             const prev_reserve = await manager.reserveAmount()
             const prev_accrued_fees = (await manager.pods(pod.address)).accruedFees
@@ -743,13 +723,10 @@ describe('Dullahan full system tests - Mainnet version', () => {
             const previous_user_balance = await token1.balanceOf(podOwner.address)
             const previous_market_balance = await token1.balanceOf(aToken1.address)
 
-            const previous_pod_rented_amount = (await manager.pods(pod.address)).rentedAmount
-
             const prev_pod_state = await manager.pods(pod.address)
 
             const repay_tx = await pod.connect(podOwner).repayGhoAndWithdrawCollateral(repay_amount, withdraw_amount, podOwner.address)
 
-            const tx_block = (await repay_tx).blockNumber
             const tx_timestamp = BigNumber.from((await ethers.provider.getBlock((await repay_tx).blockNumber || 0)).timestamp)
 
             const new_owed_fees = await manager.podOwedFees(pod.address)
@@ -767,7 +744,6 @@ describe('Dullahan full system tests - Mainnet version', () => {
             const new_pod_stkAave_balance = await stkAave.balanceOf(pod.address)
 
             expect(new_owed_fees).to.be.eq(0)
-            //expect(new_pod_debt).to.be.eq(previous_pod_debt.sub(expected_debt_repayed))
 
             await expect(repay_tx).to.emit(gho, "Transfer")
             .withArgs(podOwner.address, pod.address, repay_amount);
@@ -775,11 +751,8 @@ describe('Dullahan full system tests - Mainnet version', () => {
             await expect(repay_tx).to.emit(gho, "Transfer")
             .withArgs(pod.address, manager.address, total_fees_repayed);
 
-            /*await expect(repay_tx).to.emit(gho, "Transfer")
-            .withArgs(pod.address, aavePool.address, expected_debt_repayed);*/
-
-            /*await expect(repay_tx).to.emit(debtGho, "Transfer")
-            .withArgs(pod.address, ethers.constants.AddressZero, expected_debt_repayed);*/
+            await expect(repay_tx).to.emit(debtGho, "Transfer")
+            .withArgs(pod.address, ethers.constants.AddressZero, expected_debt_repayed);
 
             await expect(repay_tx).to.emit(pod, "GhoRepayed")
             .withArgs(repay_amount);
@@ -817,13 +790,9 @@ describe('Dullahan full system tests - Mainnet version', () => {
             const new_user_balance = await token1.balanceOf(podOwner.address)
             const new_market_balance = await token1.balanceOf(aToken1.address)
 
-            const new_pod_aToken_balance = await aToken1.balanceOf(pod.address, { blockTag: tx_block })
-
             expect(new_pod_balance).to.be.eq(previous_pod_balance)
             expect(new_user_balance).to.be.eq(previous_user_balance.add(withdraw_amount))
             expect(new_market_balance).to.be.eq(previous_market_balance.sub(withdraw_amount))
-
-            //expect(new_pod_aToken_balance).to.be.eq(previous_pod_aToken_balance.sub(withdraw_amount))
 
             expect(await manager.lastIndexUpdate()).to.be.eq(tx_timestamp)
 
