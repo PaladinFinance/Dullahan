@@ -24,8 +24,9 @@ export async function resetFork() {
             {
                 forking: {
                     jsonRpcUrl: "https://eth-mainnet.alchemyapi.io/v2/" + (process.env.ALCHEMY_API_KEY || ''),
-                    blockNumber: 17315020
+                    blockNumber: 17711300
                 },
+                gas: 30000000,
             },
         ],
     });

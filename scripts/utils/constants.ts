@@ -4,20 +4,7 @@ import { BigNumber } from "ethers";
 export const AAVE = "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9";
 export const STK_AAVE = "0x4da27a545c0c5B758a6BA100e3a049001de870f5";
 
-export const HOLDER_AAVE = "0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8";
-export const AMOUNT_AAVE = ethers.utils.parseEther('585000')
-
-export const REWARD_TOKEN_1 = "0x6B175474E89094C44Da98b954EedeAC495271d0F"; //here : DAI
-export const REWARD_TOKEN_2 = "0xAB846Fb6C81370327e784Ae7CbB6d6a6af6Ff4BF"; //here : PAL
-
-export const HOLDER_REWARD_1 = "0x075e72a5eDf65F0A5f44699c7654C1a76941Ddc8";
-export const AMOUNT_REWARD_1 = ethers.utils.parseEther('150000000')
-export const HOLDER_REWARD_2 = "0x1Ae6DCBc88d6f81A7BCFcCC7198397D776F3592E";
-export const AMOUNT_REWARD_2 = ethers.utils.parseEther('2500000')
-
 export const GHO = "0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f"
-
-//export const aGHO = ""
 export const DEBT_GHO = "0x786dBff3f1292ae8F92ea68Cf93c30b34B1ed04B"
 
 export const AAVE_POOL = "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2" // V3

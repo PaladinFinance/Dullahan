@@ -16,14 +16,14 @@ import { ContractFactory } from "@ethersproject/contracts";
 import {
     getERC20,
     advanceTime,
-    resetForkGoerli,
+    resetFork,
     mintTokenStorage
 } from "../utils/utils";
 
 import {
     AAVE,
     STK_AAVE
-} from "../utils/testnet-constants"
+} from "../utils/constants"
 
 chai.use(solidity);
 const { expect } = chai;
@@ -38,7 +38,7 @@ const RAY = ethers.utils.parseEther('1000000000')
 
 const aave_amount = ethers.utils.parseEther('5000000')
 
-describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions - Goerli version', () => {
+describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions - Mainnet version', () => {
     let admin: SignerWithAddress
 
     let vault: DullahanVault
@@ -64,7 +64,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions - Goe
     const reserve_ratio = BigNumber.from(100)
 
     before(async () => {
-        await resetForkGoerli();
+        await resetFork();
 
         [admin, reserveManager, votingManager, podManager, otherPodManager, pod1, pod2, fakePod, depositor1, depositor2, depositor3] = await ethers.getSigners();
 
@@ -1811,7 +1811,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions - Goe
             const extra_Aave = ethers.utils.parseEther('50')
 
             await stkAave_staking.connect(admin).cooldown()
-            await advanceTime(864000)
+            await advanceTime(864000 * 2)
             await stkAave_staking.connect(admin).redeem(admin.address, extra_Aave)
             await aave.connect(admin).transfer(vault.address, extra_Aave)
 

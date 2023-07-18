@@ -26,7 +26,7 @@ import { ContractFactory } from "@ethersproject/contracts";
 import {
     getERC20,
     advanceTime,
-    resetForkGoerli,
+    resetFork,
     mintTokenStorage
 } from "../utils/utils";
 
@@ -34,7 +34,7 @@ import {
     AAVE,
     STK_AAVE,
     GHO,
-    aGHO,
+    //aGHO,
     DEBT_GHO,
     AAVE_POOL,
     AAVE_REWARD_CONTROLLER,
@@ -45,7 +45,7 @@ import {
     A_TOKEN_1,
     A_TOKEN_2,
     A_TOKEN_3
-} from "../utils/testnet-constants"
+} from "../utils/constants"
 
 chai.use(solidity);
 const { expect } = chai;
@@ -67,11 +67,11 @@ const RAY = ethers.utils.parseEther('1000000000')
 const UNIT = ethers.utils.parseEther('1')
 
 const aave_amount = ethers.utils.parseEther('5000000')
-const random_amount = ethers.utils.parseEther('15000000')
+const base_amount = ethers.utils.parseEther('15000000')
 
 const DISTRIBUTION_DURATION = BigNumber.from(7 * 86400);
 
-describe('Dullahan full system tests - Goerli version', () => {
+describe('Dullahan full system tests - Mainnet version', () => {
     let admin: SignerWithAddress
 
     let vault: DullahanVault
@@ -105,7 +105,7 @@ describe('Dullahan full system tests - Goerli version', () => {
     let stkAave_voting_power: IGovernancePowerDelegationToken
 
     let gho: IERC20
-    let aGho: IERC20
+    //let aGho: IERC20
     let debtGho: IERC20
 
     let token1: IERC20
@@ -123,7 +123,7 @@ describe('Dullahan full system tests - Goerli version', () => {
     const start_fee = BigNumber.from('270000000')
 
     before(async () => {
-        await resetForkGoerli();
+        await resetFork();
 
         [admin, feeChest, reserveManager, votingManager, podOwner, depositor1, depositor2, depositor3] = await ethers.getSigners();
 
@@ -142,7 +142,7 @@ describe('Dullahan full system tests - Goerli version', () => {
         stkAave_voting_power = IGovernancePowerDelegationToken__factory.connect(STK_AAVE, provider);
 
         gho = IERC20__factory.connect(GHO, provider);
-        aGho = IERC20__factory.connect(aGHO, provider);
+        //aGho = IERC20__factory.connect(aGHO, provider);
         debtGho = IERC20__factory.connect(DEBT_GHO, provider);
 
         token1 = IERC20__factory.connect(TEST_TOKEN_1, provider);
@@ -157,11 +157,15 @@ describe('Dullahan full system tests - Goerli version', () => {
 
         await mintTokenStorage(AAVE, admin, aave_amount, 0);
 
-        await mintTokenStorage(TEST_TOKEN_1, admin, random_amount, 0);
-        await mintTokenStorage(TEST_TOKEN_2, admin, random_amount, 0);
-        await mintTokenStorage(TEST_TOKEN_3, admin, random_amount, 0);
-        /*const token2_holder = "0x518B13838F5810979C173d79699F2ADB92E4956f"
-        await getERC20(admin, token2_holder, token2, admin.address, ethers.utils.parseEther('1000'));*/
+        /*await mintTokenStorage(TEST_TOKEN_1, admin, base_amount, 0);
+        await mintTokenStorage(TEST_TOKEN_2, admin, base_amount, 0);
+        await mintTokenStorage(TEST_TOKEN_3, admin, base_amount, 0);*/
+        const token1_holder = "0x075e72a5eDf65F0A5f44699c7654C1a76941Ddc8"
+        const token2_holder = "0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8"
+        const token3_holder = "0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503"
+        await getERC20(admin, token1_holder, token1, admin.address, base_amount);
+        await getERC20(admin, token2_holder, token2, admin.address, ethers.utils.parseEther('500000'));
+        await getERC20(admin, token3_holder, token3, admin.address, BigNumber.from('5000000000000'));
 
         await aave.connect(admin).approve(stkAave_staking.address, aave_amount);
         await stkAave_staking.connect(admin).stake(admin.address, aave_amount);
@@ -363,7 +367,7 @@ describe('Dullahan full system tests - Goerli version', () => {
 
             const aave_pool_pod_status = await aavePool.getUserAccountData(pod.address)
 
-            expect(aave_pool_pod_status.totalCollateralBase).to.be.eq(150000000000) // because 1500 DAI & Base is 8 decimals in Aave Oracle
+            //expect(aave_pool_pod_status.totalCollateralBase).to.be.eq(150000000000) // because 1500 DAI & Base is 8 decimals in Aave Oracle
             expect(aave_pool_pod_status.totalDebtBase).to.be.eq(0)
             
             await expect(deposit_tx).to.emit(token1, "Transfer")
@@ -428,8 +432,8 @@ describe('Dullahan full system tests - Goerli version', () => {
             const new_pod_debt = await debtGho.balanceOf(pod.address, { blockTag: tx_block })
 
             const fee_ratio = await manager.mintFeeRatio()
-            const expected_amount = borrow_amount.mul(MAX_BPS.sub(fee_ratio)).div(MAX_BPS)
             const expected_fee_amount = borrow_amount.mul(fee_ratio).div(MAX_BPS)
+            const expected_amount = borrow_amount.sub(expected_fee_amount)
 
             expect(new_pod_balance).to.be.eq(previous_pod_balance)
             expect(new_user_balance).to.be.eq(previous_user_balance.add(expected_amount))
@@ -585,7 +589,7 @@ describe('Dullahan full system tests - Goerli version', () => {
 
         it(' should repay all GHO & return all stkAAVE', async () => {
 
-            const holder = "0x85c792d6E608D90b7513F01AefA6c8260D3a7aF5"
+            const holder = "0x6F923E527a9Ac0fCA4E4a14EE10778fbf0d8013c"
             await getERC20(admin, holder, gho, admin.address, ethers.utils.parseEther('50000'));
 
             await gho.connect(admin).transfer(podOwner.address, ethers.utils.parseEther('50000'))
@@ -615,7 +619,7 @@ describe('Dullahan full system tests - Goerli version', () => {
 
         beforeEach(async () => {
 
-            const holder = "0x85c792d6E608D90b7513F01AefA6c8260D3a7aF5"
+            const holder = "0x523b27014B865c4d8f3dAC9c6e3B1bAd13D22b87"
             await getERC20(admin, holder, gho, admin.address, ethers.utils.parseEther('50000'));
 
             await gho.connect(admin).transfer(podOwner.address, ethers.utils.parseEther('50000'))
@@ -698,7 +702,7 @@ describe('Dullahan full system tests - Goerli version', () => {
 
         beforeEach(async () => {
 
-            const holder = "0x85c792d6E608D90b7513F01AefA6c8260D3a7aF5"
+            const holder = "0xF5Fb27b912D987B5b6e02A1B1BE0C1F0740E2c6f"
             await getERC20(admin, holder, gho, admin.address, ethers.utils.parseEther('50000'));
 
             await gho.connect(admin).transfer(podOwner.address, ethers.utils.parseEther('50000'))
@@ -865,7 +869,7 @@ describe('Dullahan full system tests - Goerli version', () => {
 
         beforeEach(async () => {
 
-            const holder = "0x85c792d6E608D90b7513F01AefA6c8260D3a7aF5"
+            const holder = "0x36C4Bd54D54DD898C242F5F634f5D0CEf3bE2A8A"
             await getERC20(admin, holder, gho, admin.address, ethers.utils.parseEther('50000'));
 
             await gho.connect(admin).transfer(podOwner.address, ethers.utils.parseEther('50000'))

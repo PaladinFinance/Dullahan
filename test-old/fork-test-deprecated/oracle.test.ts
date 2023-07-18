@@ -13,7 +13,7 @@ import { ContractFactory } from "@ethersproject/contracts";
 
 import {
     resetForkGoerli
-} from "../utils/utils";
+} from "../../test/utils/utils";
 
 import {
     GHO,
@@ -21,7 +21,7 @@ import {
     TEST_TOKEN_1,
     TEST_TOKEN_2,
     TEST_TOKEN_3,
-} from "../utils/testnet-constants"
+} from "../../test/utils/testnet-constants"
 
 chai.use(solidity);
 const { expect } = chai;
