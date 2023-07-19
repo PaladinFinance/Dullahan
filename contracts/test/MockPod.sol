@@ -19,7 +19,8 @@ contract MockPod {
 
     address public podOwner;
 
-    address public delegate;
+    address public votingPowerDelegate;
+    address public proposalPowerDelegate;
 
     address public collateral;
     address public aToken;
@@ -34,7 +35,8 @@ contract MockPod {
         address _podOwner,
         address _collateral,
         address _aToken,
-        address _delegate
+        address _votingPowerDelegate,
+        address _proposalPowerDelegate
     ) external {
         initialized = true;
         
@@ -43,7 +45,8 @@ contract MockPod {
         registry = _registry;
         podOwner = _podOwner;
         collateral = _collateral;
-        delegate = _delegate;
+        votingPowerDelegate = _votingPowerDelegate;
+        proposalPowerDelegate = _proposalPowerDelegate;
 
         aToken = _aToken;
 
@@ -107,8 +110,9 @@ contract MockPod {
         IERC20(collateral).transfer(receiver, amount);
     }
 
-    function updateDelegation(address newDelegate) external {
-        delegate = newDelegate;
+    function updateDelegation(address newVotingDelegate, address newProposalDelegate) external {
+        votingPowerDelegate = newVotingDelegate;
+        proposalPowerDelegate = newProposalDelegate;
     }
 
     function updateRegistry(address newRegistry) external {

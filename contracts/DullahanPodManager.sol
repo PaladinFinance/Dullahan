@@ -330,6 +330,8 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         // Clone to create new Pod
         address newPod = Clones.clone(podImplementation);
 
+        (address votingPowerDelegate, address proposalPowerDelegate) = DullahanVault(vault).getDelegates();
+
         // Initialize the newly created Pod
         DullahanPod(newPod).init(
             address(this),
@@ -338,7 +340,8 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
             podOwner,
             collateral,
             aTokenForCollateral[collateral],
-            DullahanVault(vault).getDelegate()
+            votingPowerDelegate,
+            proposalPowerDelegate
         );
 
         // Write the new Pod data in storage
@@ -515,7 +518,8 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     function updatePodDelegation(address pod) public whenNotPaused {
         if(pods[pod].podAddress == address(0)) revert Errors.PodInvalid();
 
-        DullahanPod(pod).updateDelegation(DullahanVault(vault).getDelegate());
+        (address votingPowerDelegate, address proposalPowerDelegate) = DullahanVault(vault).getDelegates();
+        DullahanPod(pod).updateDelegation(votingPowerDelegate, proposalPowerDelegate);
     }
 
     /**

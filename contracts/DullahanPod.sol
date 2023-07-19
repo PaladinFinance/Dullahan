@@ -55,7 +55,9 @@ contract DullahanPod is ReentrancyGuard {
     address public podOwner;
 
     /** @notice Address of the delegate receiving the Pod voting power */
-    address public delegate;
+    address public votingPowerDelegate;
+    /** @notice Address of the delegate receiving the Pod proposal power */
+    address public proposalPowerDelegate;
 
     /** @notice Address of the collateral in the Pod */
     address public collateral;
@@ -76,8 +78,7 @@ contract DullahanPod is ReentrancyGuard {
         address indexed collateral,
         address indexed podOwner,
         address vault,
-        address registry,
-        address delegate
+        address registry
     );
 
     /** @notice Event emitted when collateral is deposited */
@@ -95,8 +96,8 @@ contract DullahanPod is ReentrancyGuard {
     /** @notice Event emitted when stkAAVE is rented by the Pod */
     event RentedStkAave();
 
-    /** @notice Event emitted when the Pod delegate is updated */
-    event UpdatedDelegate(address indexed oldDelegate, address indexed newDelegate);
+    /** @notice Event emitted when the Pod delegates are updated */
+    event UpdatedDelegate(address indexed newVotingDelegate, address indexed newProposalDelegate);
     /** @notice Event emitted when the Pod registry is updated */
     event UpdatedRegistry(address indexed oldRegistry, address indexed newRegistry);
 
@@ -130,7 +131,8 @@ contract DullahanPod is ReentrancyGuard {
         registry = address(0xdEaD);
         collateral = address(0xdEaD);
         podOwner = address(0xdEaD);
-        delegate = address(0xdEaD);
+        votingPowerDelegate = address(0xdEaD);
+        proposalPowerDelegate = address(0xdEaD);
     }
 
     /**
@@ -141,7 +143,8 @@ contract DullahanPod is ReentrancyGuard {
     * @param _podOwner Address of the Pod owner
     * @param _collateral Address of the collateral
     * @param _aToken Address of the aToken for the collateral
-    * @param _delegate Address of the delegate for the voting power
+    * @param _votingPowerDelegate Address of the delegate for the voting power
+    * @param _proposalPowerDelegate Address of the delegate for the proposal power
     */
     function init(
         address _manager,
@@ -150,7 +153,8 @@ contract DullahanPod is ReentrancyGuard {
         address _podOwner,
         address _collateral,
         address _aToken,
-        address _delegate
+        address _votingPowerDelegate,
+        address _proposalPowerDelegate
     ) external {
         if(initialized) revert Errors.AlreadyInitialized();
         if(manager == address(0xdEaD)) revert Errors.CannotInitialize();
@@ -161,7 +165,8 @@ contract DullahanPod is ReentrancyGuard {
             || _podOwner == address(0)
             || _collateral == address(0)
             || _aToken == address(0)
-            || _delegate == address(0)
+            || _votingPowerDelegate == address(0)
+            || _proposalPowerDelegate == address(0)
         ) revert Errors.AddressZero();
 
         initialized = true;
@@ -171,7 +176,8 @@ contract DullahanPod is ReentrancyGuard {
         registry = _registry;
         podOwner = _podOwner;
         collateral = _collateral;
-        delegate = _delegate;
+        votingPowerDelegate = _votingPowerDelegate;
+        proposalPowerDelegate = _proposalPowerDelegate;
 
         aToken = _aToken;
 
@@ -183,10 +189,17 @@ contract DullahanPod is ReentrancyGuard {
         // Set full allowance for the Vault to be able to pull back the stkAAVE rented to this Pod
         IERC20(_stkAave).safeIncreaseAllowance(_vault, type(uint256).max);
 
-        // Set the Delegate for this Pod's voting power
-        IGovernancePowerDelegationToken(_stkAave).delegate(_delegate);
+        // Set the Delegates for this Pod's voting power
+        IGovernancePowerDelegationToken(_stkAave).delegateByType(
+            _votingPowerDelegate,
+            IGovernancePowerDelegationToken.DelegationType.VOTING_POWER
+        );
+        IGovernancePowerDelegationToken(_stkAave).delegateByType(
+            _proposalPowerDelegate,
+            IGovernancePowerDelegationToken.DelegationType.PROPOSITION_POWER
+        );
 
-        emit PodInitialized(_manager, _collateral, _podOwner, _vault, _registry, _delegate);
+        emit PodInitialized(_manager, _collateral, _podOwner, _vault, _registry);
     }
 
 
@@ -398,19 +411,26 @@ contract DullahanPod is ReentrancyGuard {
 
     /**
     * @notice Update the Pod's delegate address & delegate the voting power to it
-    * @param newDelegate Address of the new delegate
+    * @param newVotingDelegate Address of the new voting power delegate
+    * @param newProposalDelegate Address of the new proposal power delegate
     */
-    function updateDelegation(address newDelegate) external isInitialized onlyManager {
-        if(newDelegate == address(0)) revert Errors.AddressZero();
-        if(newDelegate == delegate) revert Errors.SameAddress();
+    function updateDelegation(address newVotingDelegate, address newProposalDelegate) external isInitialized onlyManager {
+        if(newVotingDelegate == address(0) || newProposalDelegate == address(0)) revert Errors.AddressZero();
 
-        address oldDelegate = delegate;
-        delegate = newDelegate;
+        votingPowerDelegate = newVotingDelegate;
+        proposalPowerDelegate = newProposalDelegate;
 
         // Update the delegation to the new Delegate
-        IGovernancePowerDelegationToken(stkAave).delegate(newDelegate);
+        IGovernancePowerDelegationToken(stkAave).delegateByType(
+            newVotingDelegate,
+            IGovernancePowerDelegationToken.DelegationType.VOTING_POWER
+        );
+        IGovernancePowerDelegationToken(stkAave).delegateByType(
+            newProposalDelegate,
+            IGovernancePowerDelegationToken.DelegationType.PROPOSITION_POWER
+        );
 
-        emit UpdatedDelegate(oldDelegate, newDelegate);
+        emit UpdatedDelegate(newVotingDelegate, newProposalDelegate);
     }
 
     /**

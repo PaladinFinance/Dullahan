@@ -74,6 +74,8 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
 
     /** @notice Address receiving the delegated voting power from the Vault */
     address public votingPowerManager;
+    /** @notice Address receiving the delegated proposal power from the Vault */
+    address public proposalPowerManager;
 
     /** @notice Percentage of funds to stay in the contract for withdraws */
     uint256 public bufferRatio = 500;
@@ -121,6 +123,8 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
 
     /** @notice Event emitted when the Voting maanger is updated */
     event UpdatedVotingPowerManager(address indexed oldManager, address indexed newManager);
+    /** @notice Event emitted when the Proposal maanger is updated */
+    event UpdatedProposalPowerManager(address indexed oldManager, address indexed newManager);
     /** @notice Event emitted when the Reserve manager is updated */
     event UpdatedReserveManager(address indexed oldManager, address indexed newManager);
     /** @notice Event emitted when the Buffer ratio is updated */
@@ -180,13 +184,15 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
     * @notice Initialize the Vault
     * @dev Initialize the Vault by performing a seed deposit & delegating voting power
     * @param _votingPowerManager Address to receive the voting power delegation
+    * @param _proposalPowerManager Address to receive the proposal power delegation
     */
-    function init(address _votingPowerManager) external onlyAdmin {
+    function init(address _votingPowerManager, address _proposalPowerManager) external onlyAdmin {
         if(initialized) revert Errors.AlreadyInitialized();
 
         initialized = true;
 
         votingPowerManager = _votingPowerManager;
+        proposalPowerManager = _proposalPowerManager;
 
         // Seed deposit to prevent 1 wei LP token exploit
         _deposit(
@@ -195,8 +201,15 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
             msg.sender
         );
 
-        // Set the delegate, so any received token updates the delegate's voting power
-        IGovernancePowerDelegationToken(STK_AAVE).delegate(_votingPowerManager);
+        // Set the delegates, so any received token updates the delegates power
+        IGovernancePowerDelegationToken(STK_AAVE).delegateByType(
+            _votingPowerManager,
+            IGovernancePowerDelegationToken.DelegationType.VOTING_POWER
+        );
+        IGovernancePowerDelegationToken(STK_AAVE).delegateByType(
+            _proposalPowerManager,
+            IGovernancePowerDelegationToken.DelegationType.PROPOSITION_POWER
+        );
 
         emit Initialized();
     }
@@ -358,11 +371,10 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
     }
 
     /**
-    * @notice Get the current delegate for the Vault voting power
-    * @return address : Curent delegate for the Vault voting power
+    * @notice Get the current delegates for the Vault voting power & proposal power
     */
-    function getDelegate() external view returns(address) {
-        return votingPowerManager;
+    function getDelegates() external view returns(address votingPower, address proposalPower) {
+        return (votingPowerManager, proposalPowerManager);
     }
 
 
@@ -788,9 +800,31 @@ contract DullahanVault is IERC4626, ScalingERC20, ReentrancyGuard, Pausable {
         address oldManager = votingPowerManager;
         votingPowerManager = newManager;
 
-        IGovernancePowerDelegationToken(STK_AAVE).delegate(newManager);
+        IGovernancePowerDelegationToken(STK_AAVE).delegateByType(
+            newManager,
+            IGovernancePowerDelegationToken.DelegationType.VOTING_POWER
+        );
 
         emit UpdatedVotingPowerManager(oldManager, newManager);
+    }
+
+    /**
+    * @notice Update the Vault's proposal power manager & delegate the proposal power to it
+    * @param newManager Address of the new manager
+    */
+    function updateProposalPowerManager(address newManager) external onlyAdmin {
+        if(newManager == address(0)) revert Errors.AddressZero();
+        if(newManager == proposalPowerManager) revert Errors.SameAddress();
+
+        address oldManager = proposalPowerManager;
+        proposalPowerManager = newManager;
+
+        IGovernancePowerDelegationToken(STK_AAVE).delegateByType(
+            newManager,
+            IGovernancePowerDelegationToken.DelegationType.PROPOSITION_POWER
+        );
+
+        emit UpdatedProposalPowerManager(oldManager, newManager);
     }
 
     /**

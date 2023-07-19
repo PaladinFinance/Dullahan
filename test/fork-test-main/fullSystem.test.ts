@@ -209,7 +209,7 @@ describe('Dullahan full system tests - Mainnet version', () => {
 
         const seed_deposit = ethers.utils.parseEther('0.001')
         await stkAave.connect(admin).approve(vault.address, seed_deposit)
-        await vault.connect(admin).init(votingManager.address)
+        await vault.connect(admin).init(votingManager.address, votingManager.address)
 
         staking = (await stakingFactory.connect(admin).deploy(
             vault.address
@@ -284,7 +284,8 @@ describe('Dullahan full system tests - Mainnet version', () => {
             expect(await new_pod.collateral()).to.be.eq(token1.address)
             expect(await new_pod.aToken()).to.be.eq(aToken1.address)
             expect(await new_pod.podOwner()).to.be.eq(podOwner.address)
-            expect(await new_pod.delegate()).to.be.eq(votingManager.address)
+            expect(await new_pod.votingPowerDelegate()).to.be.eq(votingManager.address)
+            expect(await new_pod.proposalPowerDelegate()).to.be.eq(votingManager.address)
             expect(await new_pod.aave()).to.be.eq(aave.address)
             expect(await new_pod.stkAave()).to.be.eq(stkAave.address)
 
@@ -308,8 +309,7 @@ describe('Dullahan full system tests - Mainnet version', () => {
                 token1.address,
                 podOwner.address,
                 vault.address,
-                registry.address,
-                votingManager.address
+                registry.address
             );
 
         });

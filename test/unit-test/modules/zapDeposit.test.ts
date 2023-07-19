@@ -120,7 +120,7 @@ describe('DullahanZapDeposit contract tests', () => {
 
         const seed_deposit = ethers.utils.parseEther('0.001')
         await stkAave.connect(admin).approve(vault.address, seed_deposit)
-        await vault.connect(admin).init(votingManager.address)
+        await vault.connect(admin).init(votingManager.address, votingManager.address)
 
         staking = (await stakingFactory.connect(admin).deploy(
             vault.address

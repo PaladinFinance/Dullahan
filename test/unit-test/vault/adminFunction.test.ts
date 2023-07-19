@@ -47,9 +47,11 @@ describe('DullahanVault contract tests - Admin functions', () => {
 
     let reserveManager: SignerWithAddress
     let votingManager: SignerWithAddress
+    let proposalManager: SignerWithAddress
 
     let otherReserveManager: SignerWithAddress
     let otherVotingManager: SignerWithAddress
+    let otherProposalManager: SignerWithAddress
 
     let podManager: SignerWithAddress
     let podManager2: SignerWithAddress
@@ -71,7 +73,7 @@ describe('DullahanVault contract tests - Admin functions', () => {
     before(async () => {
         await resetFork();
 
-        [admin, newAdmin, reserveManager, votingManager, otherReserveManager, otherVotingManager, podManager, podManager2, fakePod, depositor1, depositor2, depositor3] = await ethers.getSigners();
+        [admin, newAdmin, reserveManager, votingManager, proposalManager, otherReserveManager, otherVotingManager, otherProposalManager, podManager, podManager2, fakePod, depositor1, depositor2, depositor3] = await ethers.getSigners();
 
         vaultFactory = await ethers.getContractFactory("DullahanVault");
 
@@ -101,7 +103,7 @@ describe('DullahanVault contract tests - Admin functions', () => {
         await vault.deployed();
 
         await stkAave.connect(admin).approve(vault.address, seed_deposit)
-        await vault.connect(admin).init(votingManager.address)
+        await vault.connect(admin).init(votingManager.address, proposalManager.address)
 
     });
 
@@ -118,6 +120,7 @@ describe('DullahanVault contract tests - Admin functions', () => {
         expect(await vault.reserveManager()).to.be.eq(reserveManager.address)
 
         expect(await vault.votingPowerManager()).to.be.eq(votingManager.address)
+        expect(await vault.proposalPowerManager()).to.be.eq(proposalManager.address)
 
         expect(await vault.name()).to.be.eq("Dullahan stkAave")
         expect(await vault.symbol()).to.be.eq("dstkAAVE")
@@ -474,14 +477,28 @@ describe('DullahanVault contract tests - Admin functions', () => {
 
         it(' should update parameter correctly (& emit Event)', async () => {
 
+            expect(await stkAave_voting_power.getDelegateeByType(vault.address, 0)).to.be.eq(votingManager.address)
+
             const update_tx = await vault.connect(admin).updateVotingPowerManager(otherVotingManager.address)
 
             expect(await vault.votingPowerManager()).to.be.eq(otherVotingManager.address)
+            expect(await stkAave_voting_power.getDelegateeByType(vault.address, 0)).to.be.eq(otherVotingManager.address)
 
             await expect(update_tx).to.emit(vault, 'UpdatedVotingPowerManager').withArgs(
                 votingManager.address,
                 otherVotingManager.address
             );
+
+        });
+
+        it(' should not update the other delegate', async () => {
+
+            expect(await stkAave_voting_power.getDelegateeByType(vault.address, 1)).to.be.eq(proposalManager.address)
+
+            await vault.connect(admin).updateVotingPowerManager(otherVotingManager.address)
+
+            expect(await vault.proposalPowerManager()).to.be.eq(proposalManager.address)
+            expect(await stkAave_voting_power.getDelegateeByType(vault.address, 1)).to.be.eq(proposalManager.address)
 
         });
 
@@ -501,6 +518,57 @@ describe('DullahanVault contract tests - Admin functions', () => {
 
             await expect(
                 vault.connect(depositor1).updateVotingPowerManager(otherVotingManager.address)
+            ).to.be.revertedWith('CallerNotAdmin')
+
+        });
+
+    });
+
+    describe('updateProposalPowerManager', async () => {
+
+        it(' should update parameter correctly (& emit Event)', async () => {
+
+            expect(await stkAave_voting_power.getDelegateeByType(vault.address, 1)).to.be.eq(proposalManager.address)
+
+            const update_tx = await vault.connect(admin).updateProposalPowerManager(otherProposalManager.address)
+
+            expect(await vault.proposalPowerManager()).to.be.eq(otherProposalManager.address)
+            expect(await stkAave_voting_power.getDelegateeByType(vault.address, 1)).to.be.eq(otherProposalManager.address)
+
+            await expect(update_tx).to.emit(vault, 'UpdatedProposalPowerManager').withArgs(
+                proposalManager.address,
+                otherProposalManager.address
+            );
+
+        });
+
+        it(' should not update the other delegate', async () => {
+
+            expect(await stkAave_voting_power.getDelegateeByType(vault.address, 0)).to.be.eq(votingManager.address)
+
+            await vault.connect(admin).updateProposalPowerManager(otherProposalManager.address)
+
+            expect(await vault.votingPowerManager()).to.be.eq(votingManager.address)
+            expect(await stkAave_voting_power.getDelegateeByType(vault.address, 0)).to.be.eq(votingManager.address)
+
+        });
+
+        it(' should fail if given invalid parameter', async () => {
+
+            await expect(
+                vault.connect(admin).updateProposalPowerManager(ethers.constants.AddressZero)
+            ).to.be.revertedWith('AddressZero')
+
+            await expect(
+                vault.connect(admin).updateProposalPowerManager(proposalManager.address)
+            ).to.be.revertedWith('SameAddress')
+
+        });
+
+        it(' should only be callable by admin', async () => {
+
+            await expect(
+                vault.connect(depositor1).updateProposalPowerManager(otherProposalManager.address)
             ).to.be.revertedWith('CallerNotAdmin')
 
         });

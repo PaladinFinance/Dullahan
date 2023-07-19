@@ -45,6 +45,7 @@ describe('DullahanVault contract tests - Pod Manager functions', () => {
 
     let reserveManager: SignerWithAddress
     let votingManager: SignerWithAddress
+    let proposalManager: SignerWithAddress
 
     let podManager: SignerWithAddress
     let otherPodManager: SignerWithAddress
@@ -67,7 +68,7 @@ describe('DullahanVault contract tests - Pod Manager functions', () => {
     before(async () => {
         await resetFork();
 
-        [admin, reserveManager, votingManager, podManager, otherPodManager, pod1, pod2, depositor1, depositor2, depositor3] = await ethers.getSigners();
+        [admin, reserveManager, votingManager, proposalManager, podManager, otherPodManager, pod1, pod2, depositor1, depositor2, depositor3] = await ethers.getSigners();
 
         vaultFactory = await ethers.getContractFactory("DullahanVault");
 
@@ -97,7 +98,7 @@ describe('DullahanVault contract tests - Pod Manager functions', () => {
         await vault.deployed();
 
         await stkAave.connect(admin).approve(vault.address, seed_deposit)
-        await vault.connect(admin).init(votingManager.address)
+        await vault.connect(admin).init(votingManager.address, proposalManager.address)
 
     });
 

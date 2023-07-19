@@ -85,20 +85,22 @@ describe('DullahanPod contract tests - Pod Manager functions', () => {
 
     let registry: DullahanRegistry
 
-    let delegate: SignerWithAddress
+    let votingDelegate: SignerWithAddress
+    let proposalDelegate: SignerWithAddress
     let podOwner: SignerWithAddress
     let otherUser: SignerWithAddress
 
     let rewardToken1: IERC20
     let rewardToken2: IERC20
 
-    let newDelegate: SignerWithAddress
+    let newVotingDelegate: SignerWithAddress
+    let newProposalDelegate: SignerWithAddress
     let newRegistry: SignerWithAddress
 
     before(async () => {
         await resetFork();
 
-        [admin, podManager, delegate, podOwner, otherUser, newDelegate, newRegistry] = await ethers.getSigners();
+        [admin, podManager, votingDelegate, proposalDelegate, podOwner, otherUser, newVotingDelegate, newProposalDelegate, newRegistry] = await ethers.getSigners();
 
         podFactory = await ethers.getContractFactory("DullahanPod");
         tokenFactory = await ethers.getContractFactory("MockERC20");
@@ -198,7 +200,8 @@ describe('DullahanPod contract tests - Pod Manager functions', () => {
             podOwner.address,
             collat.address,
             aCollat.address,
-            delegate.address
+            votingDelegate.address,
+            proposalDelegate.address
         )
 
         await pod2.connect(admin).init(
@@ -208,7 +211,8 @@ describe('DullahanPod contract tests - Pod Manager functions', () => {
             podOwner.address,
             collat.address,
             aCollat.address,
-            delegate.address
+            votingDelegate.address,
+            proposalDelegate.address
         )
 
         await collat.connect(admin).mint(podOwner.address, ethers.utils.parseEther('10000'))
@@ -372,30 +376,27 @@ describe('DullahanPod contract tests - Pod Manager functions', () => {
 
         it(' should update the delegation correctly (& emit correct Event)', async () => {
             
-            const update_tx = await pod2.connect(podManager).updateDelegation(newDelegate.address)
+            const update_tx = await pod2.connect(podManager).updateDelegation(newVotingDelegate.address, newProposalDelegate.address)
 
-            expect(await pod2.delegate()).to.be.eq(newDelegate.address)
+            expect(await pod2.votingPowerDelegate()).to.be.eq(newVotingDelegate.address)
+            expect(await pod2.proposalPowerDelegate()).to.be.eq(newProposalDelegate.address)
 
-            expect(await stkAave_voting_power.getDelegateeByType(pod2.address, 0)).to.be.eq(newDelegate.address)
-            expect(await stkAave_voting_power.getDelegateeByType(pod2.address, 1)).to.be.eq(newDelegate.address)
+            expect(await stkAave_voting_power.getDelegateeByType(pod2.address, 0)).to.be.eq(newVotingDelegate.address)
+            expect(await stkAave_voting_power.getDelegateeByType(pod2.address, 1)).to.be.eq(newProposalDelegate.address)
 
             await expect(update_tx).to.emit(pod2, "UpdatedDelegate")
-            .withArgs(delegate.address, newDelegate.address);
-
-        });
-
-        it(' should fail if given the same address', async () => {
-
-            await expect(
-                pod2.connect(podManager).updateDelegation(delegate.address)
-            ).to.be.revertedWith('SameAddress')
+            .withArgs(newVotingDelegate.address, newProposalDelegate.address);
 
         });
 
         it(' should fail if given address 0x0', async () => {
 
             await expect(
-                pod2.connect(podManager).updateDelegation(ethers.constants.AddressZero)
+                pod2.connect(podManager).updateDelegation(ethers.constants.AddressZero, newProposalDelegate.address)
+            ).to.be.revertedWith('AddressZero')
+
+            await expect(
+                pod2.connect(podManager).updateDelegation(newVotingDelegate.address, ethers.constants.AddressZero)
             ).to.be.revertedWith('AddressZero')
 
         });
@@ -403,11 +404,11 @@ describe('DullahanPod contract tests - Pod Manager functions', () => {
         it(' should only be callable by the Pod manager', async () => {
 
             await expect(
-                pod2.connect(admin).updateDelegation(newDelegate.address)
+                pod2.connect(admin).updateDelegation(newVotingDelegate.address, newProposalDelegate.address)
             ).to.be.revertedWith('NotPodManager')
 
             await expect(
-                pod2.connect(podOwner).updateDelegation(newDelegate.address)
+                pod2.connect(podOwner).updateDelegation(newVotingDelegate.address, newProposalDelegate.address)
             ).to.be.revertedWith('NotPodManager')
 
         });

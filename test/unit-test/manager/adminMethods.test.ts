@@ -93,6 +93,7 @@ describe('DullahanPodManager contract tests - Admin functions', () => {
     let registry: DullahanRegistry
 
     let delegate: SignerWithAddress
+    let delegate2: SignerWithAddress
     let podOwner: SignerWithAddress
     let otherUser: SignerWithAddress
 
@@ -104,7 +105,7 @@ describe('DullahanPodManager contract tests - Admin functions', () => {
     before(async () => {
         await resetFork();
 
-        [admin, feeChest, delegate, podOwner, otherUser, newRegistry, newFeeModule, newOracle, newCalculator] = await ethers.getSigners();
+        [admin, feeChest, delegate, delegate2, podOwner, otherUser, newRegistry, newFeeModule, newOracle, newCalculator] = await ethers.getSigners();
 
         managerFactory = await ethers.getContractFactory("DullahanPodManager");
         podFactory = await ethers.getContractFactory("MockPod");
@@ -199,7 +200,7 @@ describe('DullahanPodManager contract tests - Admin functions', () => {
         await manager.deployed();
 
         await vault.connect(admin).setManager(manager.address)
-        await vault.connect(admin).setDelegate(delegate.address)
+        await vault.connect(admin).setDelegates(delegate.address, delegate2.address)
 
 
         await market.connect(admin).addToken(collat.address, aCollat.address)

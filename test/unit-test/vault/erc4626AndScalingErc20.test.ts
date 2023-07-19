@@ -44,6 +44,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
 
     let reserveManager: SignerWithAddress
     let votingManager: SignerWithAddress
+    let proposalManager: SignerWithAddress
 
     let podManager: SignerWithAddress
     let fakePod: SignerWithAddress
@@ -62,7 +63,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
     before(async () => {
         await resetFork();
 
-        [admin, reserveManager, votingManager, podManager, fakePod, depositor1, depositor2, depositor3] = await ethers.getSigners();
+        [admin, reserveManager, votingManager, proposalManager, podManager, fakePod, depositor1, depositor2, depositor3] = await ethers.getSigners();
 
         vaultFactory = await ethers.getContractFactory("DullahanVault");
 
@@ -133,7 +134,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
 
         it(' should initialize the contract and make the inital deposit (& emit the correct Event)', async () => {
 
-            const init_tx = await vault.connect(admin).init(votingManager.address)
+            const init_tx = await vault.connect(admin).init(votingManager.address, proposalManager.address)
 
             expect(await vault.initialized()).to.be.true
 
@@ -150,24 +151,29 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
 
         it(' should set the correct Voting Manager & have the correct delegate', async () => {
 
-            expect(await vault.getDelegate()).to.be.eq(ethers.constants.AddressZero)
+            const old_delegates = await vault.getDelegates()
+            expect(old_delegates[0]).to.be.eq(ethers.constants.AddressZero)
+            expect(old_delegates[1]).to.be.eq(ethers.constants.AddressZero)
 
-            await vault.connect(admin).init(votingManager.address)
+            await vault.connect(admin).init(votingManager.address, proposalManager.address)
 
-            expect(await vault.getDelegate()).to.be.eq(votingManager.address)
+            const new_delegates = await vault.getDelegates()
+            expect(new_delegates[0]).to.be.eq(votingManager.address)
+            expect(new_delegates[1]).to.be.eq(proposalManager.address)
             expect(await vault.votingPowerManager()).to.be.eq(votingManager.address)
+            expect(await vault.proposalPowerManager()).to.be.eq(proposalManager.address)
 
             expect(await stkAave_voting_power.getDelegateeByType(vault.address, 0)).to.be.eq(votingManager.address)
-            expect(await stkAave_voting_power.getDelegateeByType(vault.address, 1)).to.be.eq(votingManager.address)
+            expect(await stkAave_voting_power.getDelegateeByType(vault.address, 1)).to.be.eq(proposalManager.address)
 
         });
 
         it(' should only be able to initialize once', async () => {
 
-            await vault.connect(admin).init(votingManager.address)
+            await vault.connect(admin).init(votingManager.address, proposalManager.address)
 
             await expect(
-                vault.connect(admin).init(votingManager.address)
+                vault.connect(admin).init(votingManager.address, proposalManager.address)
             ).to.be.revertedWith('AlreadyInitialized')
 
         });
@@ -175,7 +181,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
         it(' should only be callable by admin', async () => {
 
             await expect(
-                vault.connect(votingManager).init(votingManager.address)
+                vault.connect(votingManager).init(votingManager.address, proposalManager.address)
             ).to.be.revertedWith('CallerNotAdmin')
 
         });
@@ -214,7 +220,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
 
             const seed_deposit = ethers.utils.parseEther('0.001')
             await stkAave.connect(admin).approve(vault.address, seed_deposit)
-            await vault.connect(admin).init(votingManager.address)
+            await vault.connect(admin).init(votingManager.address, proposalManager.address)
 
             await stkAave.connect(admin).transfer(depositor1.address, user1_deposit)
             await stkAave.connect(admin).transfer(depositor2.address, user2_deposit)
@@ -324,7 +330,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
 
             const seed_deposit = ethers.utils.parseEther('0.001')
             await stkAave.connect(admin).approve(vault.address, seed_deposit)
-            await vault.connect(admin).init(votingManager.address)
+            await vault.connect(admin).init(votingManager.address, proposalManager.address)
 
         });
 
@@ -346,7 +352,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
 
             const seed_deposit = ethers.utils.parseEther('0.001')
             await stkAave.connect(admin).approve(vault.address, seed_deposit)
-            await vault.connect(admin).init(votingManager.address)
+            await vault.connect(admin).init(votingManager.address, proposalManager.address)
 
         });
 
@@ -373,7 +379,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
 
             const seed_deposit = ethers.utils.parseEther('0.001')
             await stkAave.connect(admin).approve(vault.address, seed_deposit)
-            await vault.connect(admin).init(votingManager.address)
+            await vault.connect(admin).init(votingManager.address, proposalManager.address)
 
             await stkAave.connect(admin).transfer(depositor1.address, user1_deposit.mul(2))
             await stkAave.connect(admin).transfer(depositor2.address, user2_deposit)
@@ -422,7 +428,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
 
             const seed_deposit = ethers.utils.parseEther('0.001')
             await stkAave.connect(admin).approve(vault.address, seed_deposit)
-            await vault.connect(admin).init(votingManager.address)
+            await vault.connect(admin).init(votingManager.address, proposalManager.address)
 
             await stkAave.connect(admin).transfer(depositor1.address, user1_deposit)
             await stkAave.connect(admin).transfer(depositor2.address, user2_deposit)
@@ -732,7 +738,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
 
             const seed_deposit = ethers.utils.parseEther('0.001')
             await stkAave.connect(admin).approve(vault.address, seed_deposit)
-            await vault.connect(admin).init(votingManager.address)
+            await vault.connect(admin).init(votingManager.address, proposalManager.address)
 
             await stkAave.connect(admin).transfer(depositor1.address, user1_deposit)
             await stkAave.connect(admin).transfer(depositor2.address, user2_deposit)
@@ -1044,7 +1050,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
 
             const seed_deposit = ethers.utils.parseEther('0.001')
             await stkAave.connect(admin).approve(vault.address, seed_deposit)
-            await vault.connect(admin).init(votingManager.address)
+            await vault.connect(admin).init(votingManager.address, proposalManager.address)
 
             await stkAave.connect(admin).transfer(depositor1.address, user1_deposit)
             await stkAave.connect(admin).transfer(depositor2.address, user2_deposit)
@@ -1471,7 +1477,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
 
             const seed_deposit = ethers.utils.parseEther('0.001')
             await stkAave.connect(admin).approve(vault.address, seed_deposit)
-            await vault.connect(admin).init(votingManager.address)
+            await vault.connect(admin).init(votingManager.address, proposalManager.address)
 
             await stkAave.connect(admin).transfer(depositor1.address, user1_deposit)
             await stkAave.connect(admin).transfer(depositor2.address, user2_deposit)
@@ -1898,7 +1904,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
 
             const seed_deposit = ethers.utils.parseEther('0.001')
             await stkAave.connect(admin).approve(vault.address, seed_deposit)
-            await vault.connect(admin).init(votingManager.address)
+            await vault.connect(admin).init(votingManager.address, proposalManager.address)
 
             await stkAave.connect(admin).transfer(depositor1.address, user1_deposit)
             await stkAave.connect(admin).transfer(depositor2.address, user2_deposit)
@@ -2160,7 +2166,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
 
             const seed_deposit = ethers.utils.parseEther('0.001')
             await stkAave.connect(admin).approve(vault.address, seed_deposit)
-            await vault.connect(admin).init(votingManager.address)
+            await vault.connect(admin).init(votingManager.address, proposalManager.address)
 
             await stkAave.connect(admin).transfer(depositor1.address, user1_deposit)
             await stkAave.connect(admin).transfer(depositor2.address, user2_deposit)
@@ -2260,7 +2266,7 @@ describe('DullahanVault contract tests - ERC4626 & Scaling ERC20 functions', () 
 
             const seed_deposit = ethers.utils.parseEther('0.001')
             await stkAave.connect(admin).approve(vault.address, seed_deposit)
-            await vault.connect(admin).init(votingManager.address)
+            await vault.connect(admin).init(votingManager.address, proposalManager.address)
 
             await stkAave.connect(admin).transfer(depositor1.address, user1_deposit)
             await stkAave.connect(admin).transfer(depositor2.address, user2_deposit)

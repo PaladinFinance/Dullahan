@@ -13,7 +13,8 @@ contract MockVault2 {
 
     address public manager;
 
-    address public delegate;
+    address public votingPowerManager;
+    address public proposalPowerManager;
 
     mapping(address => uint256) public managerRentedAmounts;
 
@@ -56,12 +57,13 @@ contract MockVault2 {
         IERC20(STK_AAVE).safeTransfer(msg.sender, amount);
     }
 
-    function setDelegate(address _delegate) external {
-        delegate = _delegate;
+    function setDelegates(address _delegate1, address _delegate2) external {
+        votingPowerManager = _delegate1;
+        proposalPowerManager = _delegate2;
     }
 
-    function getDelegate() external view returns(address) {
-        return delegate;
+    function getDelegates() external view returns(address votingPower, address proposalPower) {
+        return (votingPowerManager, proposalPowerManager);
     }
 
 }

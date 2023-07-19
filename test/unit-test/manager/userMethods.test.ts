@@ -95,10 +95,12 @@ describe('DullahanPodManager contract tests - user functions', () => {
     let registry: DullahanRegistry
 
     let delegate: SignerWithAddress
+    let delegate2: SignerWithAddress
     let podOwner: SignerWithAddress
     let otherUser: SignerWithAddress
 
     let newDelegate: SignerWithAddress
+    let newDelegate2: SignerWithAddress
 
     let liquidator: SignerWithAddress
 
@@ -107,7 +109,7 @@ describe('DullahanPodManager contract tests - user functions', () => {
     before(async () => {
         await resetFork();
 
-        [admin, feeChest, delegate, podOwner, otherUser, newDelegate, liquidator] = await ethers.getSigners();
+        [admin, feeChest, delegate, delegate2, podOwner, otherUser, newDelegate, newDelegate2, liquidator] = await ethers.getSigners();
 
         managerFactory = await ethers.getContractFactory("DullahanPodManager");
         podFactory = await ethers.getContractFactory("MockPod");
@@ -208,7 +210,7 @@ describe('DullahanPodManager contract tests - user functions', () => {
         await manager.deployed();
 
         await vault.connect(admin).setManager(manager.address)
-        await vault.connect(admin).setDelegate(delegate.address)
+        await vault.connect(admin).setDelegates(delegate.address, delegate2.address)
 
         await market.connect(admin).addToken(collat.address, aCollat.address)
         await market.connect(admin).addToken(collat2.address, aCollat2.address)
@@ -255,7 +257,8 @@ describe('DullahanPodManager contract tests - user functions', () => {
             expect(await new_pod.collateral()).to.be.eq(collat.address)
             expect(await new_pod.aToken()).to.be.eq(aCollat.address)
             expect(await new_pod.podOwner()).to.be.eq(podOwner.address)
-            expect(await new_pod.delegate()).to.be.eq(delegate.address)
+            expect(await new_pod.votingPowerDelegate()).to.be.eq(delegate.address)
+            expect(await new_pod.proposalPowerDelegate()).to.be.eq(delegate2.address)
             expect(await new_pod.aave()).to.be.eq(aave.address)
             expect(await new_pod.stkAave()).to.be.eq(stkAave.address)
 
@@ -944,17 +947,19 @@ describe('DullahanPodManager contract tests - user functions', () => {
             const podList = await manager.getAllPods()
             pod = MockPod__factory.connect(podList[podList.length - 1], provider);
 
-            await vault.connect(admin).setDelegate(newDelegate.address)
+            await vault.connect(admin).setDelegates(newDelegate.address, newDelegate2.address)
     
         });
         
         it(' should update the Pod delegate correctly', async () => {
             
-            expect(await pod.delegate()).to.be.eq(delegate.address)
+            expect(await pod.votingPowerDelegate()).to.be.eq(delegate.address)
+            expect(await pod.proposalPowerDelegate()).to.be.eq(delegate2.address)
 
             await manager.connect(admin).updatePodDelegation(pod.address)
             
-            expect(await pod.delegate()).to.be.eq(newDelegate.address)
+            expect(await pod.votingPowerDelegate()).to.be.eq(newDelegate.address)
+            expect(await pod.proposalPowerDelegate()).to.be.eq(newDelegate2.address)
     
         });
         
@@ -984,21 +989,29 @@ describe('DullahanPodManager contract tests - user functions', () => {
             pod2 = MockPod__factory.connect(podList[podList.length - 2], provider);
             pod3 = MockPod__factory.connect(podList[podList.length - 1], provider);
 
-            await vault.connect(admin).setDelegate(newDelegate.address)
+            await vault.connect(admin).setDelegates(newDelegate.address, newDelegate2.address)
     
         });
         
         it(' should update the Pods delegate correctly', async () => {
             
-            expect(await pod.delegate()).to.be.eq(delegate.address)
-            expect(await pod2.delegate()).to.be.eq(delegate.address)
-            expect(await pod3.delegate()).to.be.eq(delegate.address)
+            expect(await pod.votingPowerDelegate()).to.be.eq(delegate.address)
+            expect(await pod2.votingPowerDelegate()).to.be.eq(delegate.address)
+            expect(await pod3.votingPowerDelegate()).to.be.eq(delegate.address)
+            
+            expect(await pod.proposalPowerDelegate()).to.be.eq(delegate2.address)
+            expect(await pod2.proposalPowerDelegate()).to.be.eq(delegate2.address)
+            expect(await pod3.proposalPowerDelegate()).to.be.eq(delegate2.address)
 
             await manager.connect(admin).updateMultiplePodsDelegation([pod.address, pod2.address])
             
-            expect(await pod.delegate()).to.be.eq(newDelegate.address)
-            expect(await pod2.delegate()).to.be.eq(newDelegate.address)
-            expect(await pod3.delegate()).to.be.eq(delegate.address)
+            expect(await pod.votingPowerDelegate()).to.be.eq(newDelegate.address)
+            expect(await pod2.votingPowerDelegate()).to.be.eq(newDelegate.address)
+            expect(await pod3.votingPowerDelegate()).to.be.eq(delegate.address)
+            
+            expect(await pod.proposalPowerDelegate()).to.be.eq(newDelegate2.address)
+            expect(await pod2.proposalPowerDelegate()).to.be.eq(newDelegate2.address)
+            expect(await pod3.proposalPowerDelegate()).to.be.eq(delegate2.address)
     
         });
         

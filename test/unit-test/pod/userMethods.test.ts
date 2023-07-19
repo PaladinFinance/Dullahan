@@ -81,7 +81,8 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
 
     let registry: DullahanRegistry
 
-    let delegate: SignerWithAddress
+    let votingDelegate: SignerWithAddress
+    let proposalDelegate: SignerWithAddress
     let podOwner: SignerWithAddress
     let otherUser: SignerWithAddress
 
@@ -91,7 +92,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
     before(async () => {
         await resetFork();
 
-        [admin, delegate, podOwner, otherUser] = await ethers.getSigners();
+        [admin, votingDelegate, proposalDelegate, podOwner, otherUser] = await ethers.getSigners();
 
         podFactory = await ethers.getContractFactory("DullahanPod");
         tokenFactory = await ethers.getContractFactory("MockERC20");
@@ -121,13 +122,13 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
 
     beforeEach(async () => {
 
-        collat = (await tokenFactory.connect(admin).deploy("Collateral","COL")) as MockERC20;
+        collat = (await tokenFactory.connect(admin).deploy("Collateral", "COL")) as MockERC20;
         await collat.deployed();
-        aCollat = (await tokenFactory.connect(admin).deploy("aToken Collateral","aCOL")) as MockERC20;
+        aCollat = (await tokenFactory.connect(admin).deploy("aToken Collateral", "aCOL")) as MockERC20;
         await aCollat.deployed();
-        gho = (await tokenFactory.connect(admin).deploy("Mock GHO","GHO")) as MockERC20;
+        gho = (await tokenFactory.connect(admin).deploy("Mock GHO", "GHO")) as MockERC20;
         await gho.deployed();
-        ghoDebt = (await tokenFactory.connect(admin).deploy("Debt GHO","dGHO")) as MockERC20;
+        ghoDebt = (await tokenFactory.connect(admin).deploy("Debt GHO", "dGHO")) as MockERC20;
         await ghoDebt.deployed();
 
         market = (await marketFactory.connect(admin).deploy(
@@ -192,7 +193,8 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
         expect(await implementation.registry()).to.be.eq(dead_address)
         expect(await implementation.collateral()).to.be.eq(dead_address)
         expect(await implementation.podOwner()).to.be.eq(dead_address)
-        expect(await implementation.delegate()).to.be.eq(dead_address)
+        expect(await implementation.votingPowerDelegate()).to.be.eq(dead_address)
+        expect(await implementation.proposalPowerDelegate()).to.be.eq(dead_address)
 
         await expect(
             implementation.connect(admin).init(
@@ -202,7 +204,8 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
                 podOwner.address,
                 collat.address,
                 aCollat.address,
-                delegate.address
+                votingDelegate.address,
+                proposalDelegate.address
             )
         ).to.be.revertedWith('CannotInitialize')
 
@@ -239,7 +242,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
         ).to.be.revertedWith('NotInitialized')
 
         await expect(
-            implementation.connect(podOwner).updateDelegation(podOwner.address)
+            implementation.connect(podOwner).updateDelegation(podOwner.address, podOwner.address)
         ).to.be.revertedWith('NotInitialized')
 
         await expect(
@@ -259,7 +262,8 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
         expect(await pod.collateral()).to.be.eq(ethers.constants.AddressZero)
         expect(await pod.aToken()).to.be.eq(ethers.constants.AddressZero)
         expect(await pod.podOwner()).to.be.eq(ethers.constants.AddressZero)
-        expect(await pod.delegate()).to.be.eq(ethers.constants.AddressZero)
+        expect(await pod.votingPowerDelegate()).to.be.eq(ethers.constants.AddressZero)
+        expect(await pod.proposalPowerDelegate()).to.be.eq(ethers.constants.AddressZero)
 
     });
 
@@ -274,7 +278,8 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
                 podOwner.address,
                 collat.address,
                 aCollat.address,
-                delegate.address
+                votingDelegate.address,
+                proposalDelegate.address
             )
 
             expect(await pod.initialized()).to.be.true
@@ -285,19 +290,19 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             expect(await pod.collateral()).to.be.eq(collat.address)
             expect(await pod.aToken()).to.be.eq(aCollat.address)
             expect(await pod.podOwner()).to.be.eq(podOwner.address)
-            expect(await pod.delegate()).to.be.eq(delegate.address)
+            expect(await pod.votingPowerDelegate()).to.be.eq(votingDelegate.address)
+            expect(await pod.proposalPowerDelegate()).to.be.eq(proposalDelegate.address)
             expect(await pod.aave()).to.be.eq(aave.address)
             expect(await pod.stkAave()).to.be.eq(stkAave.address)
 
             await expect(init_tx).to.emit(pod, "PodInitialized")
-            .withArgs(
-                manager.address,
-                collat.address,
-                podOwner.address,
-                vault.address,
-                registry.address,
-                delegate.address
-            );
+                .withArgs(
+                    manager.address,
+                    collat.address,
+                    podOwner.address,
+                    vault.address,
+                    registry.address
+                );
 
         });
 
@@ -310,7 +315,8 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
                 podOwner.address,
                 collat.address,
                 aCollat.address,
-                delegate.address
+                votingDelegate.address,
+                proposalDelegate.address
             )
 
             expect(await stkAave.allowance(pod.address, vault.address)).to.be.eq(MAX_UINT256)
@@ -326,11 +332,12 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
                 podOwner.address,
                 collat.address,
                 aCollat.address,
-                delegate.address
+                votingDelegate.address,
+                proposalDelegate.address
             )
 
-            expect(await stkAave_voting_power.getDelegateeByType(pod.address, 0)).to.be.eq(delegate.address)
-            expect(await stkAave_voting_power.getDelegateeByType(pod.address, 1)).to.be.eq(delegate.address)
+            expect(await stkAave_voting_power.getDelegateeByType(pod.address, 0)).to.be.eq(votingDelegate.address)
+            expect(await stkAave_voting_power.getDelegateeByType(pod.address, 1)).to.be.eq(proposalDelegate.address)
 
         });
 
@@ -343,7 +350,8 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
                 podOwner.address,
                 collat.address,
                 aCollat.address,
-                delegate.address
+                votingDelegate.address,
+                proposalDelegate.address
             )
 
             await expect(
@@ -354,7 +362,8 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
                     podOwner.address,
                     collat.address,
                     aCollat.address,
-                    delegate.address
+                    votingDelegate.address,
+                    proposalDelegate.address
                 )
             ).to.be.revertedWith('AlreadyInitialized')
 
@@ -370,7 +379,8 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
                     podOwner.address,
                     collat.address,
                     aCollat.address,
-                    delegate.address
+                    votingDelegate.address,
+                    proposalDelegate.address
                 )
             ).to.be.revertedWith('AddressZero')
 
@@ -382,7 +392,8 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
                     podOwner.address,
                     collat.address,
                     aCollat.address,
-                    delegate.address
+                    votingDelegate.address,
+                    proposalDelegate.address
                 )
             ).to.be.revertedWith('AddressZero')
 
@@ -394,7 +405,8 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
                     podOwner.address,
                     collat.address,
                     aCollat.address,
-                    delegate.address
+                    votingDelegate.address,
+                    proposalDelegate.address
                 )
             ).to.be.revertedWith('AddressZero')
 
@@ -406,7 +418,8 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
                     ethers.constants.AddressZero,
                     collat.address,
                     aCollat.address,
-                    delegate.address
+                    votingDelegate.address,
+                    proposalDelegate.address
                 )
             ).to.be.revertedWith('AddressZero')
 
@@ -418,7 +431,8 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
                     podOwner.address,
                     ethers.constants.AddressZero,
                     aCollat.address,
-                    delegate.address
+                    votingDelegate.address,
+                    proposalDelegate.address
                 )
             ).to.be.revertedWith('AddressZero')
 
@@ -430,7 +444,8 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
                     podOwner.address,
                     collat.address,
                     ethers.constants.AddressZero,
-                    delegate.address
+                    votingDelegate.address,
+                    proposalDelegate.address
                 )
             ).to.be.revertedWith('AddressZero')
 
@@ -442,6 +457,20 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
                     podOwner.address,
                     collat.address,
                     aCollat.address,
+                    ethers.constants.AddressZero,
+                    proposalDelegate.address
+                )
+            ).to.be.revertedWith('AddressZero')
+
+            await expect(
+                pod.connect(admin).init(
+                    manager.address,
+                    vault.address,
+                    registry.address,
+                    podOwner.address,
+                    collat.address,
+                    aCollat.address,
+                    votingDelegate.address,
                     ethers.constants.AddressZero
                 )
             ).to.be.revertedWith('AddressZero')
@@ -463,7 +492,8 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
                 podOwner.address,
                 collat.address,
                 aCollat.address,
-                delegate.address
+                votingDelegate.address,
+                proposalDelegate.address
             )
 
             await collat.connect(admin).mint(podOwner.address, deposit_amount.mul(2))
@@ -493,18 +523,18 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             expect(new_market_balance).to.be.eq(previous_market_balance.add(deposit_amount))
 
             expect(new_pod_aToken_balance).to.be.eq(previous_pod_aToken_balance.add(deposit_amount))
-            
+
             await expect(deposit_tx).to.emit(collat, "Transfer")
-            .withArgs(podOwner.address, pod.address, deposit_amount);
+                .withArgs(podOwner.address, pod.address, deposit_amount);
 
             await expect(deposit_tx).to.emit(collat, "Approval")
-            .withArgs(pod.address, market.address, deposit_amount);
+                .withArgs(pod.address, market.address, deposit_amount);
 
             await expect(deposit_tx).to.emit(collat, "Transfer")
-            .withArgs(pod.address, market.address, deposit_amount);
+                .withArgs(pod.address, market.address, deposit_amount);
 
             await expect(deposit_tx).to.emit(pod, "CollateralDeposited")
-            .withArgs(collat.address, deposit_amount);
+                .withArgs(collat.address, deposit_amount);
 
         });
 
@@ -555,7 +585,8 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
                 podOwner.address,
                 collat.address,
                 aCollat.address,
-                delegate.address
+                votingDelegate.address,
+                proposalDelegate.address
             )
 
             await collat.connect(admin).mint(podOwner.address, deposit_amount.mul(2))
@@ -589,10 +620,10 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             expect(new_pod_aToken_balance).to.be.eq(previous_pod_aToken_balance.sub(withdraw_amount))
 
             await expect(withdraw_tx).to.emit(collat, "Transfer")
-            .withArgs(market.address, podOwner.address, withdraw_amount);
+                .withArgs(market.address, podOwner.address, withdraw_amount);
 
             await expect(withdraw_tx).to.emit(pod, "CollateralWithdrawn")
-            .withArgs(collat.address, withdraw_amount);
+                .withArgs(collat.address, withdraw_amount);
 
         });
 
@@ -636,10 +667,10 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             expect(new_pod_aToken_balance).to.be.eq(0)
 
             await expect(withdraw_tx).to.emit(collat, "Transfer")
-            .withArgs(market.address, podOwner.address, previous_pod_aToken_balance);
+                .withArgs(market.address, podOwner.address, previous_pod_aToken_balance);
 
             await expect(withdraw_tx).to.emit(pod, "CollateralWithdrawn")
-            .withArgs(collat.address, previous_pod_aToken_balance);
+                .withArgs(collat.address, previous_pod_aToken_balance);
 
         });
 
@@ -696,10 +727,10 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             expect(new_pod_aToken_balance).to.be.eq(previous_pod_aToken_balance.sub(withdraw_amount))
 
             await expect(withdraw_tx).to.emit(collat, "Transfer")
-            .withArgs(market.address, podOwner.address, withdraw_amount);
+                .withArgs(market.address, podOwner.address, withdraw_amount);
 
             await expect(withdraw_tx).to.emit(pod, "CollateralWithdrawn")
-            .withArgs(collat.address, withdraw_amount);
+                .withArgs(collat.address, withdraw_amount);
 
         });
 
@@ -729,10 +760,10 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             expect(new_pod_aToken_balance).to.be.eq(previous_pod_aToken_balance.sub(withdraw_amount))
 
             await expect(withdraw_tx).to.emit(collat, "Transfer")
-            .withArgs(market.address, otherUser.address, withdraw_amount);
+                .withArgs(market.address, otherUser.address, withdraw_amount);
 
             await expect(withdraw_tx).to.emit(pod, "CollateralWithdrawn")
-            .withArgs(collat.address, withdraw_amount);
+                .withArgs(collat.address, withdraw_amount);
 
         });
 
@@ -751,7 +782,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             ).to.be.revertedWith('AddressZero')
 
         });
-        
+
         it(' should fail if given a null amount', async () => {
 
             await expect(
@@ -790,7 +821,8 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
                 podOwner.address,
                 collat.address,
                 aCollat.address,
-                delegate.address
+                votingDelegate.address,
+                proposalDelegate.address
             )
 
             await collat.connect(admin).mint(podOwner.address, deposit_amount.mul(2))
@@ -863,7 +895,8 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
                 podOwner.address,
                 collat.address,
                 aCollat.address,
-                delegate.address
+                votingDelegate.address,
+                proposalDelegate.address
             )
 
             await collat.connect(admin).mint(podOwner.address, deposit_amount.mul(2))
@@ -972,7 +1005,8 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
                 podOwner.address,
                 collat.address,
                 aCollat.address,
-                delegate.address
+                votingDelegate.address,
+                proposalDelegate.address
             )
 
             const prev_pod_balance = await stkAave.balanceOf(otherPod.address)
@@ -1006,7 +1040,8 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
                 podOwner.address,
                 collat.address,
                 aCollat.address,
-                delegate.address
+                votingDelegate.address,
+                proposalDelegate.address
             )
 
             await collat.connect(admin).mint(podOwner.address, deposit_amount.mul(2))
@@ -1039,7 +1074,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             expect(new_pod_debt).to.be.eq(previous_pod_debt.add(borrow_amount))
 
             await expect(mint_tx).to.emit(pod, "GhoMinted")
-            .withArgs(expected_amount);
+                .withArgs(expected_amount);
 
         });
 
@@ -1062,7 +1097,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             expect(new_pod_rented_amount).to.be.eq(previous_pod_rented_amount.add(expected_rented_amount))
 
             await expect(mint_tx).to.emit(stkAave, "Transfer")
-            .withArgs(vault.address, pod.address, expected_rented_amount);
+                .withArgs(vault.address, pod.address, expected_rented_amount);
 
         });
 
@@ -1083,12 +1118,12 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             expect(new_manager_reserve).to.be.eq(previous_manager_reserve.add(expected_fee_amount))
 
             await expect(mint_tx).to.emit(gho, "Transfer")
-            .withArgs(pod.address, manager.address, expected_fee_amount);
+                .withArgs(pod.address, manager.address, expected_fee_amount);
 
         });
 
         it(' should take all available stkAave if not enough to cover borrow amount', async () => {
-            
+
             const bigger_borrow_amount = ethers.utils.parseEther('5000')
 
             const small_stkAave_balance = ethers.utils.parseEther('15')
@@ -1096,7 +1131,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
                 await stkAave.balanceOf(vault.address)
             )
             await stkAave.connect(admin).transfer(vault.address, small_stkAave_balance)
-            
+
             const previous_pod_balance = await stkAave.balanceOf(pod.address)
 
             const previous_pod_rented_amount = await manager.podRentedAmount(pod.address)
@@ -1111,7 +1146,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             expect(new_pod_rented_amount).to.be.eq(previous_pod_rented_amount.add(small_stkAave_balance))
 
             await expect(mint_tx).to.emit(stkAave, "Transfer")
-            .withArgs(vault.address, pod.address, small_stkAave_balance);
+                .withArgs(vault.address, pod.address, small_stkAave_balance);
 
         });
 
@@ -1141,7 +1176,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             expect(new_pod_debt).to.be.eq(previous_pod_debt.add(borrow_amount))
 
             await expect(mint_tx).to.emit(pod, "GhoMinted")
-            .withArgs(expected_amount);
+                .withArgs(expected_amount);
 
         });
 
@@ -1172,7 +1207,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             ).to.be.revertedWith('AddressZero')
 
         });
-        
+
         it(' should fail if given a null amount', async () => {
 
             await expect(
@@ -1214,7 +1249,8 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
                 podOwner.address,
                 collat.address,
                 aCollat.address,
-                delegate.address
+                votingDelegate.address,
+                proposalDelegate.address
             )
 
             await collat.connect(admin).mint(podOwner.address, deposit_amount.mul(2))
@@ -1250,16 +1286,16 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             expect(new_pod_debt).to.be.eq(previous_pod_debt.sub(expected_debt_repayed))
 
             await expect(repay_tx).to.emit(gho, "Transfer")
-            .withArgs(podOwner.address, pod.address, repay_amount);
+                .withArgs(podOwner.address, pod.address, repay_amount);
 
             await expect(repay_tx).to.emit(gho, "Transfer")
-            .withArgs(pod.address, manager.address, previous_owed_fees);
+                .withArgs(pod.address, manager.address, previous_owed_fees);
 
             await expect(repay_tx).to.emit(gho, "Transfer")
-            .withArgs(pod.address, ethers.constants.AddressZero, expected_debt_repayed);
+                .withArgs(pod.address, ethers.constants.AddressZero, expected_debt_repayed);
 
             await expect(repay_tx).to.emit(pod, "GhoRepayed")
-            .withArgs(repay_amount);
+                .withArgs(repay_amount);
 
         });
 
@@ -1281,13 +1317,13 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             expect(new_pod_debt).to.be.eq(previous_pod_debt)
 
             await expect(repay_tx).to.emit(gho, "Transfer")
-            .withArgs(podOwner.address, pod.address, small_repay_amount);
+                .withArgs(podOwner.address, pod.address, small_repay_amount);
 
             await expect(repay_tx).to.emit(gho, "Transfer")
-            .withArgs(pod.address, manager.address, small_repay_amount);
+                .withArgs(pod.address, manager.address, small_repay_amount);
 
             await expect(repay_tx).to.emit(pod, "GhoRepayed")
-            .withArgs(small_repay_amount);
+                .withArgs(small_repay_amount);
 
         });
 
@@ -1308,16 +1344,16 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             const total_amount = previous_owed_fees.add(previous_pod_debt)
 
             await expect(repay_tx).to.emit(gho, "Transfer")
-            .withArgs(podOwner.address, pod.address, total_amount);
+                .withArgs(podOwner.address, pod.address, total_amount);
 
             await expect(repay_tx).to.emit(gho, "Transfer")
-            .withArgs(pod.address, manager.address, previous_owed_fees);
+                .withArgs(pod.address, manager.address, previous_owed_fees);
 
             await expect(repay_tx).to.emit(gho, "Transfer")
-            .withArgs(pod.address, ethers.constants.AddressZero, previous_pod_debt);
+                .withArgs(pod.address, ethers.constants.AddressZero, previous_pod_debt);
 
             await expect(repay_tx).to.emit(pod, "GhoRepayed")
-            .withArgs(total_amount);
+                .withArgs(total_amount);
 
         });
 
@@ -1357,7 +1393,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             const new_pod_balance = await stkAave.balanceOf(pod.address)
 
             const new_pod_rented_amount = await manager.podRentedAmount(pod.address)
-            
+
             const new_pod_debt = await ghoDebt.balanceOf(pod.address)
 
             const ratio = await manager.ghoToStkAaveRatio()
@@ -1369,7 +1405,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             expect(new_pod_rented_amount).to.be.eq(expected_current_rented_amount)
 
             await expect(repay_tx).to.emit(stkAave, "Transfer")
-            .withArgs(pod.address, vault.address, returned_amount);
+                .withArgs(pod.address, vault.address, returned_amount);
 
         });
 
@@ -1388,7 +1424,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             expect(new_reserve).to.be.eq(previous_reserve.add(previous_owed_fees))
 
         });
-        
+
         it(' should fail if given a null amount', async () => {
 
             await expect(
@@ -1433,7 +1469,8 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
                 podOwner.address,
                 collat.address,
                 aCollat.address,
-                delegate.address
+                votingDelegate.address,
+                proposalDelegate.address
             )
 
             await collat.connect(admin).mint(podOwner.address, deposit_amount.mul(2))
@@ -1475,16 +1512,16 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             expect(new_pod_debt).to.be.eq(previous_pod_debt.sub(expected_debt_repayed))
 
             await expect(repay_withdraw_tx).to.emit(gho, "Transfer")
-            .withArgs(podOwner.address, pod.address, repay_amount);
+                .withArgs(podOwner.address, pod.address, repay_amount);
 
             await expect(repay_withdraw_tx).to.emit(gho, "Transfer")
-            .withArgs(pod.address, manager.address, previous_owed_fees);
+                .withArgs(pod.address, manager.address, previous_owed_fees);
 
             await expect(repay_withdraw_tx).to.emit(gho, "Transfer")
-            .withArgs(pod.address, ethers.constants.AddressZero, expected_debt_repayed);
+                .withArgs(pod.address, ethers.constants.AddressZero, expected_debt_repayed);
 
             await expect(repay_withdraw_tx).to.emit(pod, "GhoRepayed")
-            .withArgs(repay_amount);
+                .withArgs(repay_amount);
 
             const new_pod_balance = await collat.balanceOf(pod.address)
             const new_user_balance = await collat.balanceOf(podOwner.address)
@@ -1499,10 +1536,10 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             expect(new_pod_aToken_balance).to.be.eq(previous_pod_aToken_balance.sub(withdraw_amount))
 
             await expect(repay_withdraw_tx).to.emit(collat, "Transfer")
-            .withArgs(market.address, podOwner.address, withdraw_amount);
+                .withArgs(market.address, podOwner.address, withdraw_amount);
 
             await expect(repay_withdraw_tx).to.emit(pod, "CollateralWithdrawn")
-            .withArgs(collat.address, withdraw_amount);
+                .withArgs(collat.address, withdraw_amount);
 
         });
 
@@ -1535,16 +1572,16 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             const total_amount = previous_owed_fees.add(previous_pod_debt)
 
             await expect(repay_withdraw_tx).to.emit(gho, "Transfer")
-            .withArgs(podOwner.address, pod.address, total_amount);
+                .withArgs(podOwner.address, pod.address, total_amount);
 
             await expect(repay_withdraw_tx).to.emit(gho, "Transfer")
-            .withArgs(pod.address, manager.address, previous_owed_fees);
+                .withArgs(pod.address, manager.address, previous_owed_fees);
 
             await expect(repay_withdraw_tx).to.emit(gho, "Transfer")
-            .withArgs(pod.address, ethers.constants.AddressZero, previous_pod_debt);
+                .withArgs(pod.address, ethers.constants.AddressZero, previous_pod_debt);
 
             await expect(repay_withdraw_tx).to.emit(pod, "GhoRepayed")
-            .withArgs(total_amount);
+                .withArgs(total_amount);
 
             const new_pod_balance = await collat.balanceOf(pod.address)
             const new_user_balance = await collat.balanceOf(podOwner.address)
@@ -1560,10 +1597,10 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             expect(new_pod_aToken_balance).to.be.eq(0)
 
             await expect(repay_withdraw_tx).to.emit(collat, "Transfer")
-            .withArgs(market.address, podOwner.address, previous_pod_aToken_balance);
+                .withArgs(market.address, podOwner.address, previous_pod_aToken_balance);
 
             await expect(repay_withdraw_tx).to.emit(pod, "CollateralWithdrawn")
-            .withArgs(collat.address, previous_pod_aToken_balance);
+                .withArgs(collat.address, previous_pod_aToken_balance);
 
         });
 
@@ -1574,7 +1611,7 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             ).to.be.revertedWith('AddressZero')
 
         });
-        
+
         it(' should fail if given a null amount', async () => {
 
             await expect(
@@ -1617,7 +1654,8 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
                 podOwner.address,
                 collat.address,
                 aCollat.address,
-                delegate.address
+                votingDelegate.address,
+                proposalDelegate.address
             )
 
             await collat.connect(admin).mint(podOwner.address, deposit_amount.mul(2))
@@ -1670,12 +1708,12 @@ describe('DullahanPod contract tests - Pod Owner functions', () => {
             await expect(rent_tx).to.emit(pod, "RentedStkAave")
 
             await expect(rent_tx).to.emit(stkAave, "Transfer")
-            .withArgs(vault.address, pod.address, expected_rented_amount);
+                .withArgs(vault.address, pod.address, expected_rented_amount);
 
         });
 
         it(' should not get more if stkAave already match GHO debt or is more than needed', async () => {
-            
+
             const repay_amount = ethers.utils.parseEther('100')
 
             await gho.connect(podOwner).approve(pod.address, repay_amount)
