@@ -189,12 +189,6 @@
                 "internalType": "address",
                 "name": "registry",
                 "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "address",
-                "name": "delegate",
-                "type": "address"
             }
         ],
         "name": "PodInitialized",
@@ -212,13 +206,13 @@
             {
                 "indexed": true,
                 "internalType": "address",
-                "name": "oldDelegate",
+                "name": "newVotingDelegate",
                 "type": "address"
             },
             {
                 "indexed": true,
                 "internalType": "address",
-                "name": "newDelegate",
+                "name": "newProposalDelegate",
                 "type": "address"
             }
         ],
@@ -260,19 +254,6 @@
     {
         "inputs": [],
         "name": "MIN_MINT_AMOUNT",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "UNIT",
         "outputs": [
             {
                 "internalType": "uint256",
@@ -343,19 +324,6 @@
         "type": "function"
     },
     {
-        "inputs": [],
-        "name": "delegate",
-        "outputs": [
-            {
-                "internalType": "address",
-                "name": "",
-                "type": "address"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
         "inputs": [
             {
                 "internalType": "uint256",
@@ -402,7 +370,12 @@
             },
             {
                 "internalType": "address",
-                "name": "_delegate",
+                "name": "_votingPowerDelegate",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "_proposalPowerDelegate",
                 "type": "address"
             }
         ],
@@ -533,6 +506,19 @@
     },
     {
         "inputs": [],
+        "name": "proposalPowerDelegate",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
         "name": "registry",
         "outputs": [
             {
@@ -622,7 +608,12 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "newDelegate",
+                "name": "newVotingDelegate",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "newProposalDelegate",
                 "type": "address"
             }
         ],
@@ -647,6 +638,19 @@
     {
         "inputs": [],
         "name": "vault",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "votingPowerDelegate",
         "outputs": [
             {
                 "internalType": "address",

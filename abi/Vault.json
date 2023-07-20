@@ -569,7 +569,45 @@
                 "type": "address"
             }
         ],
+        "name": "UpdatedProposalPowerManager",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "oldManager",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "newManager",
+                "type": "address"
+            }
+        ],
         "name": "UpdatedReserveManager",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "oldRatio",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "newRatio",
+                "type": "uint256"
+            }
+        ],
+        "name": "UpdatedReserveRatio",
         "type": "event"
     },
     {
@@ -934,11 +972,6 @@
     {
         "inputs": [
             {
-                "internalType": "address",
-                "name": "from",
-                "type": "address"
-            },
-            {
                 "internalType": "uint256",
                 "name": "amount",
                 "type": "uint256"
@@ -970,11 +1003,16 @@
     },
     {
         "inputs": [],
-        "name": "getDelegate",
+        "name": "getDelegates",
         "outputs": [
             {
                 "internalType": "address",
-                "name": "",
+                "name": "votingPower",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "proposalPower",
                 "type": "address"
             }
         ],
@@ -1010,6 +1048,11 @@
             {
                 "internalType": "address",
                 "name": "_votingPowerManager",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "_proposalPowerManager",
                 "type": "address"
             }
         ],
@@ -1293,6 +1336,19 @@
             }
         ],
         "stateMutability": "pure",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "proposalPowerManager",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
         "type": "function"
     },
     {
@@ -1609,7 +1665,33 @@
                 "type": "address"
             }
         ],
+        "name": "updateProposalPowerManager",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "newManager",
+                "type": "address"
+            }
+        ],
         "name": "updateReserveManager",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "newRatio",
+                "type": "uint256"
+            }
+        ],
+        "name": "updateReserveRatio",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"

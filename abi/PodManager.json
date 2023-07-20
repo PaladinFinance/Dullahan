@@ -35,6 +35,11 @@
                 "internalType": "address",
                 "name": "_oracleModule",
                 "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "_discountCalculator",
+                "type": "address"
             }
         ],
         "stateMutability": "nonpayable",
@@ -92,6 +97,11 @@
     },
     {
         "inputs": [],
+        "name": "NumberExceed96Bits",
+        "type": "error"
+    },
+    {
+        "inputs": [],
         "name": "OwnerAddressZero",
         "type": "error"
     },
@@ -127,6 +137,25 @@
             }
         ],
         "name": "CollateralUpdated",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "oldCalculator",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "newCalculator",
+                "type": "address"
+            }
+        ],
+        "name": "DiscountCalculatorUpdated",
         "type": "event"
     },
     {
@@ -394,6 +423,25 @@
             {
                 "indexed": false,
                 "internalType": "uint256",
+                "name": "oldThreshold",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "newThreshold",
+                "type": "uint256"
+            }
+        ],
+        "name": "ProcessThresholdUpdated",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
                 "name": "oldRatio",
                 "type": "uint256"
             },
@@ -599,6 +647,19 @@
         "type": "function"
     },
     {
+        "inputs": [],
+        "name": "discountCalculator",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
         "inputs": [
             {
                 "internalType": "address",
@@ -665,6 +726,25 @@
             }
         ],
         "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "account",
+                "type": "address"
+            }
+        ],
+        "name": "getAllOwnerPods",
+        "outputs": [
+            {
+                "internalType": "address[]",
+                "name": "",
+                "type": "address[]"
+            }
+        ],
+        "stateMutability": "view",
         "type": "function"
     },
     {
@@ -855,6 +935,30 @@
         "type": "function"
     },
     {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "ownerPods",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
         "inputs": [],
         "name": "pause",
         "outputs": [],
@@ -964,9 +1068,9 @@
                 "type": "address"
             },
             {
-                "internalType": "uint256",
-                "name": "rentedAmount",
-                "type": "uint256"
+                "internalType": "uint96",
+                "name": "lastUpdate",
+                "type": "uint96"
             },
             {
                 "internalType": "uint256",
@@ -975,7 +1079,7 @@
             },
             {
                 "internalType": "uint256",
-                "name": "lastUpdate",
+                "name": "rentedAmount",
                 "type": "uint256"
             },
             {
@@ -998,6 +1102,19 @@
             }
         ],
         "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "processThreshold",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
         "type": "function"
     },
     {
@@ -1120,6 +1237,19 @@
     {
         "inputs": [
             {
+                "internalType": "address",
+                "name": "newCalculator",
+                "type": "address"
+            }
+        ],
+        "name": "updateDiscountCalculator",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
                 "internalType": "uint256",
                 "name": "newRatio",
                 "type": "uint256"
@@ -1140,6 +1270,19 @@
         ],
         "name": "updateFeeModule",
         "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "updateGlobalState",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
         "stateMutability": "nonpayable",
         "type": "function"
     },
@@ -1237,6 +1380,19 @@
                 "type": "bool"
             }
         ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "newThreshold",
+                "type": "uint256"
+            }
+        ],
+        "name": "updateProcessThreshold",
+        "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
     },

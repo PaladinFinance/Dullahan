@@ -67,6 +67,11 @@
     },
     {
         "inputs": [],
+        "name": "NumberExceed128Bits",
+        "type": "error"
+    },
+    {
+        "inputs": [],
         "name": "OwnerAddressZero",
         "type": "error"
     },
@@ -762,9 +767,14 @@
                 "type": "uint256"
             },
             {
-                "internalType": "uint256",
+                "internalType": "uint128",
                 "name": "lastUpdate",
-                "type": "uint256"
+                "type": "uint128"
+            },
+            {
+                "internalType": "uint128",
+                "name": "distributionEndTimestamp",
+                "type": "uint128"
             },
             {
                 "internalType": "uint256",
@@ -779,11 +789,6 @@
             {
                 "internalType": "uint256",
                 "name": "queuedRewardAmount",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "distributionEndTimestamp",
                 "type": "uint256"
             }
         ],
