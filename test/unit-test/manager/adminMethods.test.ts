@@ -223,7 +223,7 @@ describe('DullahanPodManager contract tests - Admin functions', () => {
         expect(await manager.discountCalculator()).to.be.eq(calculatorModule.address)
 
         expect(await manager.extraLiquidationRatio()).to.be.eq(500)
-        expect(await manager.mintFeeRatio()).to.be.eq(50)
+        expect(await manager.mintFeeRatio()).to.be.eq(25)
         expect(await manager.protocolFeeRatio()).to.be.eq(1000)
 
     });
@@ -551,7 +551,7 @@ describe('DullahanPodManager contract tests - Admin functions', () => {
 
     describe('updateMintFeeRatio', async () => {
 
-        const new_ratio = BigNumber.from('250')
+        const new_ratio = BigNumber.from('50')
         
         it(' should update the storage correctly (& emit Event)', async () => {
 

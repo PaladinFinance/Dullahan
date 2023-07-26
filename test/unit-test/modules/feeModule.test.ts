@@ -22,7 +22,7 @@ let vaultfactory: ContractFactory
 const UNIT = ethers.utils.parseEther('1')
 const MAX_BPS = BigNumber.from('10000')
 
-const start_fee = BigNumber.from('270000000')
+const start_fee = BigNumber.from('1590000000')
 
 describe('DullahanFeeModule contract tests', () => {
     let admin: SignerWithAddress
@@ -109,9 +109,9 @@ describe('DullahanFeeModule contract tests', () => {
 
         it(' should return the correct fee per second', async () => {
 
-            const threshold = ethers.utils.parseEther('0.75')
+            const threshold = ethers.utils.parseEther('0.9')
             const base_mult = ethers.utils.parseEther('1')
-            const extra_mult_step = ethers.utils.parseEther('4')
+            const extra_mult_step = ethers.utils.parseEther('10')
 
             const base_fee = start_fee
 

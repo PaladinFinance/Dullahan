@@ -106,7 +106,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     /** @notice Extra ratio applied during liquidations */
     uint256 public extraLiquidationRatio = 500; // BPS: 5%
     /** @notice Ratio of minted amount taken as minting fees */
-    uint256 public mintFeeRatio = 50; // BPS: 0.5%
+    uint256 public mintFeeRatio = 25; // BPS: 0.25%
     /** @notice Ratio of renting fees taken as protocol fees */
     uint256 public protocolFeeRatio = 1000; // BPS: 10%
 

@@ -118,7 +118,7 @@ describe('Dullahan full system tests - Mainnet version', () => {
 
     const reserve_ratio = BigNumber.from(100)
 
-    const start_fee = BigNumber.from('270000000')
+    const start_fee = BigNumber.from('1590000000')
 
     before(async () => {
         await resetFork();

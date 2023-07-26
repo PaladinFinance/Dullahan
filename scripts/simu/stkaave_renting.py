@@ -12,7 +12,7 @@ getcontext().rounding = ROUND_FLOOR
 # ----------- Constants -------------
 
 base_multiplier = Decimal(1)
-threshold = Decimal(0.75)
+threshold = Decimal(0.90)
 
 year = Decimal(31536000)
 
@@ -24,18 +24,18 @@ fee = Decimal(0.1) # 10% fee
 
 # from Aave
 GHO_per_stkAAVE = Decimal(100)
-GHO_yearly_APY = Decimal(0.02) # current eqv to 2% APY
-max_interest_rate_discount = Decimal(0.20)
+GHO_yearly_APY = Decimal(0.0151) # current eqv to 1.51% APY
+max_interest_rate_discount = Decimal(0.30)
 
 # from Dullahan
 vault_TVL = Decimal(80000)
-renting_fee_yearly = Decimal(0.085)
+renting_fee_yearly = Decimal(0.05)
 renting_fee_per_sec = renting_fee_yearly / year
 
-extra_multiplier_per_bps = Decimal(6) # => so 100% => multiplier is x2
+extra_multiplier_per_bps = Decimal(10) # => so 100% => multiplier is x2
 
 # prices
-stkAave_price = Decimal(86.33)
+stkAave_price = Decimal(71.28)
 GHO_price = Decimal(1)
 
 # ------------------------------------
@@ -69,20 +69,20 @@ current_utilization = Decimal(0)
 while(current_utilization <= vault_TVL):
     utilization_rate = current_utilization / vault_TVL
     current_rate = renting_fee_per_sec
-    print(utilization_steps)
-    print(utilization_rate)
-    print(current_rate)
-    print()
+    #print(utilization_steps)
+    #print(utilization_rate)
+    #print(current_rate)
+    #print()
 
     if(utilization_rate >= threshold):
         multiplier = base_multiplier + (extra_multiplier_per_bps * (utilization_rate - threshold))
-        print(multiplier)
+        #print(multiplier)
         current_rate = current_rate * multiplier
-        print(current_rate)
-        print()
+        #print(current_rate)
+        #print()
 
     yearly_rate = current_rate * year
-    yearly_renting_rate = yearly_rate / GHO_per_stkAAVE # si yearly_rate=> 0.085 => 0.00085 GHO/GHO debt a l'annee
+    yearly_renting_rate = yearly_rate / GHO_per_stkAAVE # si yearly_rate -> 0.05 -> 0.0005 GHO/GHO debt a l'annee
     print(yearly_rate)
     print(yearly_renting_rate)
     print()
@@ -93,12 +93,12 @@ while(current_utilization <= vault_TVL):
     total_GHO_fees = total_GHO_earned * fee
     GHO_earned_per_deposited_stkAave = total_GHO_earned_without_fees / vault_TVL
     dstkAave_APR = (GHO_earned_per_deposited_stkAave * GHO_price) / stkAave_price
-    print(total_GHO_earned)
-    print(total_GHO_earned_without_fees)
-    print(total_GHO_fees)
-    print(GHO_earned_per_deposited_stkAave)
-    print(dstkAave_APR)
-    print()
+    #print(total_GHO_earned)
+    #print(total_GHO_earned_without_fees)
+    #print(total_GHO_fees)
+    #print(GHO_earned_per_deposited_stkAave)
+    #print(dstkAave_APR)
+    #print()
 
     #write data in outputs
     rented_amounts.append(current_utilization)

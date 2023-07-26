@@ -26,11 +26,11 @@ contract DullahanFeeModule is IFeeModule, Owner {
     uint256 public constant UNIT = 1e18;
 
     /** @notice Threshold ratio to apply the extra multiplier */
-    uint256 public constant TRESHOLD = 0.75 ether;
+    uint256 public constant TRESHOLD = 0.90 ether;
     /** @notice Base extra multiplier */
     uint256 public constant BASE_MULTIPLIER = 1e18;
     /** @notice Multplier increase for extra ratio over the treshold  */
-    uint256 public constant EXTRA_MULTIPLIER_STEP = 4e18;
+    uint256 public constant EXTRA_MULTIPLIER_STEP = 10e18;
 
 
     // Storage

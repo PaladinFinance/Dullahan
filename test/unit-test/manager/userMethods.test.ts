@@ -235,7 +235,7 @@ describe('DullahanPodManager contract tests - user functions', () => {
         expect(await manager.discountCalculator()).to.be.eq(calculatorModule.address)
 
         expect(await manager.extraLiquidationRatio()).to.be.eq(500)
-        expect(await manager.mintFeeRatio()).to.be.eq(50)
+        expect(await manager.mintFeeRatio()).to.be.eq(25)
         expect(await manager.protocolFeeRatio()).to.be.eq(1000)
 
     });
