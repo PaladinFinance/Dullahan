@@ -735,13 +735,6 @@ contract DullahanRewardsStaking is ReentrancyGuard, Pausable, Owner {
     }
 
     /**
-    * @notice aaa
-    * @dev aaa
-    * @param aa xx
-    * @param aa xx
-    * @return uint256 : aa
-    */
-    /**
     * @notice Sets a given address as allowed to claim rewards for a given user
     * @dev Sets a given address as allowed to claim rewards for a given user
     * @param user Address of the user

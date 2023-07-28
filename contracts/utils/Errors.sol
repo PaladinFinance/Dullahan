@@ -82,4 +82,7 @@ library Errors {
     error InvalidSourceToken();
     error DepositFailed();
 
+    // Wrapper Errors
+    error NullConvertedAmount();
+
 }

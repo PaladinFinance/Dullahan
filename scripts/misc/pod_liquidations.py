@@ -7,15 +7,11 @@ from web3 import Web3, HTTPProvider
 
 load_dotenv(find_dotenv('.env'))
 
-""" ======> currently override
 MAINNET_URI = os.environ.get('MAINNET_URI')
 PRIVATE_KEY = os.environ.get('MAINNET_PRIVATE_KEY')
-"""
-NETWORK_URI = os.environ.get('GOERLI_URI')
-PRIVATE_KEY = os.environ.get('GOERLI_PRIVATE_KEY')
 
 
-w3 = Web3(HTTPProvider(NETWORK_URI,request_kwargs={'timeout':60}))
+w3 = Web3(HTTPProvider(MAINNET_URI,request_kwargs={'timeout':60}))
 user_acc = w3.eth.account.from_key(PRIVATE_KEY)
 
 MANAGER_ADDRESS = "0xD8B9147B8f77721635b1C4128c25dA601F10edc4"
@@ -32,6 +28,16 @@ for i in range(0, len(pod_list)):
 
     if is_liquidable:
         print("Pod " + str(i) + " is liquidable")
+
+        current_owed_fees = manager.functions.podCurrentOwedFees(pod_list[i]).call()
+        liquidation_data = manager.functions.estimatePodLiquidationexternal(pod_list[i]).call()
+        print("Current owed fees : " + str(current_owed_fees))
+        print("Required liquidation fees : " + str(liquidation_data[0]))
+        print("Estimated liquidation rewards: " + str(liquidation_data[1]))
+        print()
+
+        # add check the executor can liquidate right now
+
         """tx_dict = manager.functions.liquidatePod(pod_list[i]).buildTransaction({
             'from' : user_acc.address,
             'nonce' : w3.eth.getTransactionCount(user_acc.address),
@@ -44,4 +50,5 @@ for i in range(0, len(pod_list)):
         print()
         print("Liquidation Result : " + ("Success" if txReceipt.status == 1 else "Failed"))
         print()"""
+        print("----------------------------------")
 
