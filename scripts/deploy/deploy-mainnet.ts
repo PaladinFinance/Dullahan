@@ -16,16 +16,12 @@ const {
     DEBT_GHO,
     AAVE_POOL,
     AAVE_REWARD_CONTROLLER,
-    ORACLE_ADDRESS,
-    TEST_TOKEN_1,
-    TEST_TOKEN_2,
-    TEST_TOKEN_3,
-    A_TOKEN_1,
-    A_TOKEN_2,
-    A_TOKEN_3
+    ORACLE_ADDRESS
 } = require(constant_path);
 
 async function main() {
+
+    const PALADIN_COMMU_MSIG = "0x1Ae6DCBc88d6f81A7BCFcCC7198397D776F3592E"
 
     const stkAAVE = IERC20__factory.connect(STK_AAVE, hre.ethers.provider);
 
@@ -77,7 +73,7 @@ async function main() {
     const vault = await DullahanVault.deploy(
         deployer.address,
         reserve_ratio,
-        deployer.address, // to change
+        deployer.address,
         AAVE,
         STK_AAVE,
         "Dullahan stkAave",
@@ -114,7 +110,7 @@ async function main() {
     const podManager = await DullahanPodManager.deploy(
         vault.address,
         staking.address,
-        deployer.address, // to change
+        PALADIN_COMMU_MSIG,
         podImplementation.address,
         registry.address,
         feeModule.address,
@@ -144,7 +140,7 @@ async function main() {
     const approve_tx_1 = await stkAAVE.connect(deployer).approve(vault.address, seed_deposit)
     await approve_tx_1.wait(10)
 
-    const init_tx_1 = await vault.connect(deployer).init(deployer.address, { gasLimit: 1_000_000 })
+    const init_tx_1 = await vault.connect(deployer).init(PALADIN_COMMU_MSIG, PALADIN_COMMU_MSIG, { gasLimit: 1_000_000 })
     await init_tx_1.wait(10)
 
     console.log()
@@ -165,6 +161,11 @@ async function main() {
     console.log('Add Pod Manager as Reward Depositor  ...')
     const add_tx_2 = await staking.connect(deployer).addRewardDepositor(podManager.address)
     await add_tx_2.wait(10)
+
+    console.log()
+    console.log('Update Vault Reserve Manager ...')
+    const update_tx = await vault.connect(deployer).updateReserveManager(PALADIN_COMMU_MSIG)
+    await update_tx.wait(10)
 
     // Verification of contracts
 
@@ -231,7 +232,7 @@ async function main() {
         constructorArguments: [
             vault.address,
             staking.address,
-            deployer.address,
+            PALADIN_COMMU_MSIG,
             podImplementation.address,
             registry.address,
             feeModule.address,

@@ -74,7 +74,7 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     address public immutable podImplementation;
 
     /** @notice Address of the Chest to receive fees */
-    address public immutable protocolFeeChest;
+    address public protocolFeeChest;
 
     /** @notice Address of the Dullahan Registry */
     address public registry;
@@ -154,6 +154,8 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     event OracleModuleUpdated(address indexed oldMoldule, address indexed newModule);
     /** @notice Event emitted when the Discount Calculator Module is updated */
     event DiscountCalculatorUpdated(address indexed oldCalculator, address indexed newCalculator);
+    /** @notice Event emitted when the Fee Chest is updated */
+    event FeeChestUpdated(address indexed oldFeeChest, address indexed newFeeChest);
 
     /** @notice Event emitted when the Mint Fee Ratio is updated */
     event MintFeeRatioUpdated(uint256 oldRatio, uint256 newRatio);
@@ -824,6 +826,20 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
         allowedCollaterals[collateral] = allowed;
 
         emit CollateralUpdated(collateral, allowed);
+    }
+
+    /**
+    * @notice Uodate the FeeChest
+    * @param newFeeChest Address of the new FeeChest
+    */
+    function updateFeeChest(address newFeeChest) external onlyOwner {
+        if(newFeeChest == address(0)) revert Errors.AddressZero();
+        if(newFeeChest == protocolFeeChest) revert Errors.SameAddress();
+
+        address oldFeeChest = protocolFeeChest;
+        protocolFeeChest = newFeeChest;
+
+        emit FeeChestUpdated(oldFeeChest, newFeeChest);
     }
 
     /**

@@ -28,7 +28,22 @@ The Dullahan Vault uses the Scaling ERC20 logic (inspired by the Aave aToken) so
 
 ## Deployed contracts
 
-coming soon ... 
+### Main contracts
+
+**DullahanVault (dstkAAVE)** : 0x167c606be99DBf5A8aF61E1983E5B309e8FA2Ae7  
+**DullahanRewardsStaking** : 0x990f58570b4C7b8b7ae3Bc28EFEB2724bE111545 
+  
+**DullahanPod** : 0xC2F3B8ED2f461D9A8a6FF9B67E2759F64540A947  
+**DullahanPodManager** : 0xf3dEcC68c4FF828456696287B12e5AC0fa62fE56  
+
+### Modules
+
+**OracleModule** : 0x69b503f57734bCD71D2096898Dd0fc02c32Fe3ae  
+**DullahanDiscountCalculator** : 0xC23a7e7c463BAD1ae1fD9D962b04BBcB9441A10E  
+**DullahanRegistry** : 0xEc7d50D40917CF5c25A8AAae0093db165f93E2A0  
+**DullahanFeeModule** : 0x09F8e2311E0F4a9A3617667F514812522A51E41d  
+  
+**DullahanZapDeposit** : 0x653050F11B5f20213C9d1Ee62Cc02A76518649c6  
 
 
 ## Dependencies & Installation
