@@ -1,6 +1,6 @@
-# DullahanRegistry
+# Solidity API
 
-## Storage
+## DullahanRegistry
 
 ### STK_AAVE
 
@@ -66,8 +66,6 @@ address[] dullahanPodManagers
 
 Address of Dullahan Pod Managers
 
-## Events
-
 ### SetVault
 
 ```solidity
@@ -84,13 +82,11 @@ event AddPodManager(address newManager)
 
 Event emitted when a Manager is added
 
-## Constructor
+### constructor
 
 ```solidity
 constructor(address _aave, address _stkAave, address _gho, address _ghoDebt, address _aavePool, address _aaveRewardController) public
 ```
-
-## State Changing Methods
 
 ### setVault
 
@@ -132,5 +128,5 @@ Get the list of Pod Managers
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | address[] | address[] : List of Pod Managers |
+| [0] | address[] | address[] : List of Pod Managers |
 

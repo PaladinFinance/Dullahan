@@ -1,14 +1,6 @@
-# DullahanPod
+# Solidity API
 
-## Storage
-
-### UNIT
-
-```solidity
-uint256 UNIT
-```
-
-1e18 scale
+## DullahanPod
 
 ### MAX_BPS
 
@@ -66,13 +58,21 @@ address podOwner
 
 Address of the Pod owner
 
-### delegate
+### votingPowerDelegate
 
 ```solidity
-address delegate
+address votingPowerDelegate
 ```
 
 Address of the delegate receiving the Pod voting power
+
+### proposalPowerDelegate
+
+```solidity
+address proposalPowerDelegate
+```
+
+Address of the delegate receiving the Pod proposal power
 
 ### collateral
 
@@ -106,12 +106,10 @@ address stkAave
 
 Address of the stkAAVE token
 
-## Events
-
 ### PodInitialized
 
 ```solidity
-event PodInitialized(address podManager, address collateral, address podOwner, address vault, address registry, address delegate)
+event PodInitialized(address podManager, address collateral, address podOwner, address vault, address registry)
 ```
 
 Event emitted when the Pod is initialized
@@ -167,10 +165,10 @@ Event emitted when stkAAVE is rented by the Pod
 ### UpdatedDelegate
 
 ```solidity
-event UpdatedDelegate(address oldDelegate, address newDelegate)
+event UpdatedDelegate(address newVotingDelegate, address newProposalDelegate)
 ```
 
-Event emitted when the Pod delegate is updated
+Event emitted when the Pod delegates are updated
 
 ### UpdatedRegistry
 
@@ -179,8 +177,6 @@ event UpdatedRegistry(address oldRegistry, address newRegistry)
 ```
 
 Event emitted when the Pod registry is updated
-
-## Modifiers
 
 ### onlyPodOwner
 
@@ -206,7 +202,7 @@ modifier isInitialized()
 
 Check that the Pod is initialized
 
-## Constructor
+### constructor
 
 ```solidity
 constructor() public
@@ -215,7 +211,7 @@ constructor() public
 ### init
 
 ```solidity
-function init(address _manager, address _vault, address _registry, address _podOwner, address _collateral, address _aToken, address _delegate) external
+function init(address _manager, address _vault, address _registry, address _podOwner, address _collateral, address _aToken, address _votingPowerDelegate, address _proposalPowerDelegate) external
 ```
 
 Initialize the Pod with the given parameters
@@ -230,9 +226,8 @@ Initialize the Pod with the given parameters
 | _podOwner | address | Address of the Pod owner |
 | _collateral | address | Address of the collateral |
 | _aToken | address | Address of the aToken for the collateral |
-| _delegate | address | Address of the delegate for the voting power |
-
-## View Methods
+| _votingPowerDelegate | address | Address of the delegate for the voting power |
+| _proposalPowerDelegate | address | Address of the delegate for the proposal power |
 
 ### podCollateralBalance
 
@@ -246,7 +241,7 @@ Get the Pod's current collateral balance
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Current collateral balance |
+| [0] | uint256 | uint256 : Current collateral balance |
 
 ### podDebtBalance
 
@@ -260,7 +255,7 @@ Get the Pod's current GHO debt balance
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Current GHO debt balance |
+| [0] | uint256 | uint256 : Current GHO debt balance |
 
 ### podOwedFees
 
@@ -274,9 +269,7 @@ Get the stored amount of fees owed by this Pod
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Stored amount of fees owed |
-
-## State Changing Methods
+| [0] | uint256 | uint256 : Stored amount of fees owed |
 
 ### depositCollateral
 
@@ -372,7 +365,7 @@ Repay GHO fees and debt
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | bool | bool : Success |
+| [0] | bool | bool : Success |
 
 ### repayGhoAndWithdrawCollateral
 
@@ -396,7 +389,7 @@ _Repay GHO fees & debt to be allowed to withdraw collateral_
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | bool | bool : Success |
+| [0] | bool | bool : Success |
 
 ### rentStkAave
 
@@ -410,7 +403,7 @@ Rent stkAAVE from the Vault to get the best interest rate reduction
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | bool | bool : Success |
+| [0] | bool | bool : Success |
 
 ### liquidateCollateral
 
@@ -432,7 +425,7 @@ _Liquidate Pod collateral to repay owed fees, in the case the this Pod got liqui
 ### updateDelegation
 
 ```solidity
-function updateDelegation(address newDelegate) external
+function updateDelegation(address newVotingDelegate, address newProposalDelegate) external
 ```
 
 Update the Pod's delegate address & delegate the voting power to it
@@ -441,7 +434,8 @@ Update the Pod's delegate address & delegate the voting power to it
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| newDelegate | address | Address of the new delegate |
+| newVotingDelegate | address | Address of the new voting power delegate |
+| newProposalDelegate | address | Address of the new proposal power delegate |
 
 ### updateRegistry
 
@@ -456,8 +450,6 @@ Update the Pod's Registry address
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | newRegistry | address | Address of the new Registry |
-
-## Internal Methods
 
 ### _withdrawCollateral
 
@@ -492,7 +484,7 @@ _Repay GHO owed fees & debt (fees in priority)_
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | bool | bool : Success |
+| [0] | bool | bool : Success |
 
 ### _getStkAaveRewards
 

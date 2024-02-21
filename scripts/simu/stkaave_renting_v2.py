@@ -24,18 +24,18 @@ fee = Decimal(0.1) # 10% fee
 
 # from Aave
 GHO_per_stkAAVE = Decimal(100)
-GHO_yearly_APY = Decimal(0.0642) # current eqv to 6.42% APY
+GHO_yearly_APY = Decimal(0.025) # current eqv to 2.5% APY
 max_interest_rate_discount = Decimal(0.30)
 
 # from Dullahan
 vault_TVL = Decimal(80000)
-renting_fee_yearly = Decimal(0.05) # 5% yearly, change this value here to change DAO revenue
+renting_fee_yearly = Decimal(0.05)
 renting_fee_per_sec = renting_fee_yearly / year
 
 extra_multiplier_per_bps = Decimal(10) # => so 100% => multiplier is x2
 
 # prices
-stkAave_price = Decimal(92.69)
+stkAave_price = Decimal(54.7)
 GHO_price = Decimal(1)
 
 # ------------------------------------
@@ -147,18 +147,18 @@ for row, subfig in enumerate(subfigs):
     axs = subfig.subplots(nrows=1, ncols=3)
     
     axs[0].plot(utilization_rates, yearly_renting_rates, color='violet')
-    axs[0].set_title('Yearly Renting Rates %', y=1.0, pad=-14)
+    axs[0].set_title('Yearly Renting Rates', y=1.0, pad=-14)
     axs[0].set_ylim(0, 0.5)
     
     axs[1].plot(utilization_rates, vanilla_rates, color='red', label="Vanilla Borrow Rate")
     axs[1].plot(utilization_rates, discounted_rates, color='green', label="Discounted Borrow rate")
     axs[1].plot(utilization_rates, total_rates, color='blue', label="Dullahan Borrow rate")
     axs[1].legend(loc=4, prop={'size': 6})
-    axs[1].set_title('Yearly GHO Borrorw Rates %', y=1.0, pad=-14)
-    axs[1].set_ylim(1, 10)
+    axs[1].set_title('Yearly GHO Borrorw Rates', y=1.0, pad=-14)
+    axs[1].set_ylim(1, 3)
     
     axs[2].plot(utilization_rates, dstkAave_APRs, color='orange')
-    axs[2].set_title('dstkAave holders APR %', y=1.0, pad=-14)
+    axs[2].set_title('dstkAave holders APR', y=1.0, pad=-14)
     axs[2].set_ylim(0, 0.5)
 
 # set the spacing between subplots

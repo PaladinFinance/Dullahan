@@ -1,6 +1,6 @@
-# DullahanFeeModule
+# Solidity API
 
-## Storage
+## DullahanFeeModule
 
 ### UNIT
 
@@ -9,14 +9,6 @@ uint256 UNIT
 ```
 
 1e18 scale
-
-### MAX_BPS
-
-```solidity
-uint256 MAX_BPS
-```
-
-Max value for BPS - 100%
 
 ### TRESHOLD
 
@@ -58,8 +50,6 @@ uint256 feePerStkAavePerSecond
 
 Amount of GHO fees per second per stkAAVE
 
-## Events
-
 ### UpdatedFeePerStkAavePerSecond
 
 ```solidity
@@ -68,13 +58,11 @@ event UpdatedFeePerStkAavePerSecond(uint256 oldFee, uint256 newFee)
 
 Event emitted when the fee per second value is updated
 
-## Constructor
+### constructor
 
 ```solidity
 constructor(address _vault, uint256 _startFee) public
 ```
-
-## View Methods
 
 ### utilizationRate
 
@@ -90,7 +78,7 @@ _Calculates the current utilization rate based on the Vault rented amount & tota
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Current utilization rate |
+| [0] | uint256 | uint256 : Current utilization rate |
 
 ### getCurrentFeePerSecond
 
@@ -107,8 +95,6 @@ _Calculates the current fee per second based on the current utilization rate_
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | currentFee | uint256 | - uint256 : Current fee per second |
-
-## State Changing Methods
 
 ### updateFeePerStkAavePerSecond
 

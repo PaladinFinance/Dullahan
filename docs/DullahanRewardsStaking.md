@@ -1,4 +1,6 @@
-# DullahanRewardsStaking
+# Solidity API
+
+## DullahanRewardsStaking
 
 ### UserRewardState
 
@@ -40,8 +42,6 @@ struct UserClaimedRewards {
   uint256 amount;
 }
 ```
-
-## Storage
 
 ### initialized
 
@@ -107,8 +107,6 @@ mapping(address => address) allowedClaimer
 
 Addresses allowed to claim for another user
 
-## Events
-
 ### Initialized
 
 ```solidity
@@ -173,8 +171,6 @@ event RemovedRewardDepositor(address depositor)
 
 Event emitted when a reward depositor is removed
 
-## Modifiers
-
 ### onlyRewardDepositors
 
 ```solidity
@@ -191,7 +187,7 @@ modifier isInitialized()
 
 Check that the contract is initalized
 
-## Constructor
+### constructor
 
 ```solidity
 constructor(address _vault) public
@@ -202,8 +198,6 @@ constructor(address _vault) public
 ```solidity
 function init() external
 ```
-
-## View Methods
 
 ### lastRewardUpdateTimestamp
 
@@ -223,7 +217,7 @@ Get the last update timestamp for a reward token
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Last update timestamp |
+| [0] | uint256 | uint256 : Last update timestamp |
 
 ### totalAssets
 
@@ -237,7 +231,7 @@ Get the total amount of assets staked
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Total amount of assets staked |
+| [0] | uint256 | uint256 : Total amount of assets staked |
 
 ### getCurrentIndex
 
@@ -251,7 +245,7 @@ Get the current index to convert between balance and scaled balances
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Current index |
+| [0] | uint256 | uint256 : Current index |
 
 ### getRewardList
 
@@ -265,7 +259,7 @@ Get the list of all reward tokens
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | address[] | address[] : List of reward tokens |
+| [0] | address[] | address[] : List of reward tokens |
 
 ### userCurrentStakedAmount
 
@@ -285,7 +279,7 @@ Get the current amount staked by an user
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Current amount staked |
+| [0] | uint256 | uint256 : Current amount staked |
 
 ### getUserRewardState
 
@@ -306,7 +300,7 @@ Get the current reward state of an user for a given reward token
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | struct DullahanRewardsStaking.UserRewardState | UserRewardState : User reward state |
+| [0] | struct DullahanRewardsStaking.UserRewardState | UserRewardState : User reward state |
 
 ### getUserAccruedRewards
 
@@ -327,7 +321,7 @@ Get the current amount of rewards accrued by an user for a given reward token
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : amount of rewards accured |
+| [0] | uint256 | uint256 : amount of rewards accured |
 
 ### getUserTotalClaimableRewards
 
@@ -347,9 +341,7 @@ Get all current claimable amount of rewards for all reward tokens for a given us
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | struct DullahanRewardsStaking.UserClaimableRewards[] | UserClaimableRewards[] : Amounts of rewards claimable by reward token |
-
-## State Changing Methods
+| [0] | struct DullahanRewardsStaking.UserClaimableRewards[] | UserClaimableRewards[] : Amounts of rewards claimable by reward token |
 
 ### stake
 
@@ -370,7 +362,7 @@ Stake Vault shares
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : scaled amount for the deposit |
+| [0] | uint256 | uint256 : scaled amount for the deposit |
 
 ### _stake
 
@@ -392,7 +384,7 @@ _Pull the ScalingERC20 token & stake in this contract & tracks the correct scale
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : scaled amount for the deposit |
+| [0] | uint256 | uint256 : scaled amount for the deposit |
 
 ### unstake
 
@@ -415,7 +407,7 @@ _Unstake ScalingERC20 shares based on the given scaled amount & send them to the
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : amount unstaked |
+| [0] | uint256 | uint256 : amount unstaked |
 
 ### claimRewards
 
@@ -436,7 +428,7 @@ Claim the accrued rewards for a given reward token
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Amount of rewards claimed |
+| [0] | uint256 | uint256 : Amount of rewards claimed |
 
 ### claimRewardsForUser
 
@@ -458,7 +450,7 @@ Claim the accrued rewards for a given reward token on behalf of a given user
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Amount of rewards claimed |
+| [0] | uint256 | uint256 : Amount of rewards claimed |
 
 ### claimAllRewards
 
@@ -478,7 +470,7 @@ Claim all accrued rewards for all reward tokens
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | struct DullahanRewardsStaking.UserClaimedRewards[] | UserClaimedRewards[] : Amounts of reward claimed |
+| [0] | struct DullahanRewardsStaking.UserClaimedRewards[] | UserClaimedRewards[] : Amounts of reward claimed |
 
 ### claimAllRewardsForUser
 
@@ -499,7 +491,7 @@ Claim all accrued rewards for all reward tokens on behalf of a given user
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | struct DullahanRewardsStaking.UserClaimedRewards[] | UserClaimedRewards[] : Amounts of reward claimed |
+| [0] | struct DullahanRewardsStaking.UserClaimedRewards[] | UserClaimedRewards[] : Amounts of reward claimed |
 
 ### updateRewardState
 
@@ -544,9 +536,7 @@ _Set the amount of reward in the queue & push it to distribution if reaching the
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | bool | bool : success |
-
-## Internal Methods
+| [0] | bool | bool : success |
 
 ### _updateRewardDistribution
 
@@ -576,7 +566,7 @@ _Get the current index to convert between balance and scaled balances_
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Current index |
+| [0] | uint256 | uint256 : Current index |
 
 ### _getNewRewardPerToken
 
@@ -596,12 +586,12 @@ _Calculate the new rewardPerToken value for a reward token distribution_
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : new rewardPerToken value |
+| [0] | uint256 | uint256 : new rewardPerToken value |
 
 ### _getUserEarnedRewards
 
 ```solidity
-function _getUserEarnedRewards(address reward, address user) internal view returns (uint256)
+function _getUserEarnedRewards(address reward, address user, uint256 currentRewardPerToken) internal view returns (uint256)
 ```
 
 _Calculate the amount of rewards accrued by an user since last update for a reward token_
@@ -612,12 +602,13 @@ _Calculate the amount of rewards accrued by an user since last update for a rewa
 | ---- | ---- | ----------- |
 | reward | address | Address of the reward token |
 | user | address | Address of the user |
+| currentRewardPerToken | uint256 |  |
 
 #### Return Values
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Accrued rewards amount for the user |
+| [0] | uint256 | uint256 : Accrued rewards amount for the user |
 
 ### _updateRewardState
 
@@ -690,7 +681,7 @@ _Claims rewards of an user for a given reward token and sends them to the receiv
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : claimed amount |
+| [0] | uint256 | uint256 : claimed amount |
 
 ### _claimAllRewards
 
@@ -711,9 +702,7 @@ _Claims all rewards of an user and sends them to the receiver address_
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | struct DullahanRewardsStaking.UserClaimedRewards[] | UserClaimedRewards[] : list of claimed rewards |
-
-## Admin Methods
+| [0] | struct DullahanRewardsStaking.UserClaimedRewards[] | UserClaimedRewards[] : list of claimed rewards |
 
 ### pause
 

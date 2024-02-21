@@ -1,6 +1,6 @@
-# OracleModule
+# Solidity API
 
-## Storage
+## OracleModule
 
 ### UNIT
 
@@ -34,13 +34,11 @@ address GHO
 
 Address of the GHO token
 
-## Constructor
+### constructor
 
 ```solidity
 constructor(address _oracle, address _gho) public
 ```
-
-## View Methods
 
 ### getCollateralAmount
 
@@ -63,7 +61,7 @@ _Calculates the amount of collateral matching the given amount of fees based on 
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Amount of collateral |
+| [0] | uint256 | uint256 : Amount of collateral |
 
 ### getFeeAmount
 
@@ -86,5 +84,5 @@ _Calculates the amount of fees matching the given amount of collateral based on 
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Amount of fees |
+| [0] | uint256 | uint256 : Amount of fees |
 

@@ -1,6 +1,6 @@
-# DullahanPodManager
+# Solidity API
 
-## Storage
+## DullahanPodManager
 
 ### UNIT
 
@@ -55,6 +55,14 @@ address podImplementation
 ```
 
 Address of the Pod implementation
+
+### protocolFeeChest
+
+```solidity
+address protocolFeeChest
+```
+
+Address of the Chest to receive fees
 
 ### registry
 
@@ -120,13 +128,13 @@ address oracleModule
 
 Address of the Oracle Module
 
-### protocolFeeChest
+### discountCalculator
 
 ```solidity
-address protocolFeeChest
+address discountCalculator
 ```
 
-Address of the Chest to receive fees
+Address of the Discount Calculator Module
 
 ### lastUpdatedIndex
 
@@ -134,7 +142,7 @@ Address of the Chest to receive fees
 uint256 lastUpdatedIndex
 ```
 
-Last update timestamp for the Index
+Last updated value of the Index
 
 ### lastIndexUpdate
 
@@ -142,7 +150,7 @@ Last update timestamp for the Index
 uint256 lastIndexUpdate
 ```
 
-Last updated value of the Index
+Last update timestamp for the Index
 
 ### extraLiquidationRatio
 
@@ -176,7 +184,13 @@ uint256 reserveAmount
 
 Total amount set as reserve (holding Vault renting fees)
 
-## Events
+### processThreshold
+
+```solidity
+uint256 processThreshold
+```
+
+Min amount in the reserve to be processed
 
 ### PodCreation
 
@@ -274,6 +288,22 @@ event OracleModuleUpdated(address oldMoldule, address newModule)
 
 Event emitted when the Oracle Module is updated
 
+### DiscountCalculatorUpdated
+
+```solidity
+event DiscountCalculatorUpdated(address oldCalculator, address newCalculator)
+```
+
+Event emitted when the Discount Calculator Module is updated
+
+### FeeChestUpdated
+
+```solidity
+event FeeChestUpdated(address oldFeeChest, address newFeeChest)
+```
+
+Event emitted when the Fee Chest is updated
+
 ### MintFeeRatioUpdated
 
 ```solidity
@@ -298,7 +328,13 @@ event ExtraLiquidationRatioUpdated(uint256 oldRatio, uint256 newRatio)
 
 Event emitted when the Extra Liquidation Ratio is updated
 
-## Modifiers
+### ProcessThresholdUpdated
+
+```solidity
+event ProcessThresholdUpdated(uint256 oldThreshold, uint256 newThreshold)
+```
+
+Event emitted when the Mint Fee Ratio is updated
 
 ### isValidPod
 
@@ -308,13 +344,11 @@ modifier isValidPod()
 
 Check that the caller is a valid Pod
 
-## Constructor
+### constructor
 
 ```solidity
-constructor(address _vault, address _rewardsStaking, address _protocolFeeChest, address _podImplementation, address _registry, address _feeModule, address _oracleModule) public
+constructor(address _vault, address _rewardsStaking, address _protocolFeeChest, address _podImplementation, address _registry, address _feeModule, address _oracleModule, address _discountCalculator) public
 ```
-
-## View Methods
 
 ### getCurrentIndex
 
@@ -328,7 +362,7 @@ Get the current fee index
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Current index |
+| [0] | uint256 | uint256 : Current index |
 
 ### podCurrentOwedFees
 
@@ -348,7 +382,7 @@ Get the current amount of fees owed by a Pod
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Current amount of fees owed |
+| [0] | uint256 | uint256 : Current amount of fees owed |
 
 ### podOwedFees
 
@@ -368,7 +402,7 @@ Get the stored amount of fees owed by a Pod
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Stored amount of fees owed |
+| [0] | uint256 | uint256 : Stored amount of fees owed |
 
 ### getAllPods
 
@@ -382,7 +416,7 @@ Get all Pods created by this contract
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | address[] | address[] : List of Pods |
+| [0] | address[] | address[] : List of Pods |
 
 ### getAllOwnerPods
 
@@ -402,7 +436,7 @@ Get the list of Pods owned by a given account
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | address[] | address[] : List of Pods |
+| [0] | address[] | address[] : List of Pods |
 
 ### isPodLiquidable
 
@@ -422,7 +456,7 @@ Check if the given Pod is liquidable
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | bool | bool : True if liquidable |
+| [0] | bool | bool : True if liquidable |
 
 ### estimatePodLiquidationexternal
 
@@ -445,8 +479,6 @@ Estimate the amount of fees to repay to liquidate a Pod & the amount of collater
 | feeAmount | uint256 | - uint256 : Amount of fees to pay to liquidate |
 | collateralAmount | uint256 | - uint256 : Amount of collateral to receive after liquidation |
 
-## State Changing Methods
-
 ### createPod
 
 ```solidity
@@ -467,7 +499,7 @@ _Clone the Pod implementation, initialize it & store the paremeters_
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | address | address : Address of the newly deployed Pod |
+| [0] | address | address : Address of the newly deployed Pod |
 
 ### updateGlobalState
 
@@ -481,7 +513,7 @@ Update the global state
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | bool | bool : Success |
+| [0] | bool | bool : Success |
 
 ### updatePodState
 
@@ -501,7 +533,7 @@ Update a Pod state
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | bool | bool : Success |
+| [0] | bool | bool : Success |
 
 ### freeStkAave
 
@@ -523,7 +555,7 @@ _Calculate the needed amount of stkAAVE for a Pod & free any extra stkAAVE held 
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | bool | bool : Success |
+| [0] | bool | bool : Success |
 
 ### liquidatePod
 
@@ -545,7 +577,7 @@ _Repay the fees owed by the Pod & receive some of the Pod colleteral (with an ex
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | bool | bool : Success |
+| [0] | bool | bool : Success |
 
 ### updatePodDelegation
 
@@ -589,7 +621,7 @@ _Send the Reserve to the staking contract to be queued for distribution & take a
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | bool | bool : Success |
+| [0] | bool | bool : Success |
 
 ### getStkAave
 
@@ -611,7 +643,7 @@ _Calculate the amount of stkAAVE a Pod need based on its GHO debt & amount ot be
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | bool | bool : Success |
+| [0] | bool | bool : Success |
 
 ### notifyStkAaveClaim
 
@@ -655,12 +687,10 @@ Notify minting fees paid by a Pod
 | ---- | ---- | ----------- |
 | feeAmount | uint256 | Amount of fees paid |
 
-## Internal Methods
-
 ### _calculatedNeededStkAave
 
 ```solidity
-function _calculatedNeededStkAave(address pod, uint256 addedDebtAmount) internal returns (uint256)
+function _calculatedNeededStkAave(address pod, uint256 addedDebtAmount) internal view returns (uint256)
 ```
 
 _Calculates the amount of stkAAVE needed by a Pod based on its GHO debt & the amount of GHO to be minted_
@@ -676,7 +706,7 @@ _Calculates the amount of stkAAVE needed by a Pod based on its GHO debt & the am
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Amount of stkAAVE needed |
+| [0] | uint256 | uint256 : Amount of stkAAVE needed |
 
 ### _accruedIndex
 
@@ -690,7 +720,7 @@ _Calculate the index accrual based on the current fee per second_
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : index accrual |
+| [0] | uint256 | uint256 : index accrual |
 
 ### _updateGlobalState
 
@@ -704,7 +734,7 @@ _Update the global state by updating the fee index_
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | bool | bool : Success |
+| [0] | bool | bool : Success |
 
 ### _updatePodState
 
@@ -724,9 +754,21 @@ _Update a Pod's state & accrued owed fees based on the last updated index_
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | bool | bool : Success |
+| [0] | bool | bool : Success |
 
-## Admin Methods
+### _processReserve
+
+```solidity
+function _processReserve() internal returns (bool)
+```
+
+_Send the Reserve to the staking contract to be queued for distribution & take a part as protocol fees_
+
+#### Return Values
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bool | bool : Success |
 
 ### updatePodRegistry
 
@@ -810,6 +852,20 @@ Update a collateral for Pod creation
 | collateral | address | Address of the collateral |
 | allowed | bool | Is the collateral allowed ofr Pod creation |
 
+### updateFeeChest
+
+```solidity
+function updateFeeChest(address newFeeChest) external
+```
+
+Uodate the FeeChest
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| newFeeChest | address | Address of the new FeeChest |
+
 ### updateRegistry
 
 ```solidity
@@ -852,6 +908,20 @@ Uodate the Oracle Module
 | ---- | ---- | ----------- |
 | newModule | address | Address of the new Module |
 
+### updateDiscountCalculator
+
+```solidity
+function updateDiscountCalculator(address newCalculator) external
+```
+
+Uodate the Discount Calculator Module
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| newCalculator | address | Address of the new Calculator |
+
 ### updateMintFeeRatio
 
 ```solidity
@@ -893,6 +963,20 @@ Uodate the extra liquidation ratio parameter
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | newRatio | uint256 | New ratio value |
+
+### updateProcessThreshold
+
+```solidity
+function updateProcessThreshold(uint256 newThreshold) external
+```
+
+Uodate the process threshold parameter
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| newThreshold | uint256 | New treshold value |
 
 ### safe96
 

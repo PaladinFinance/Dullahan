@@ -1,6 +1,6 @@
-# ScalingERC20
+# Solidity API
 
-## Storage
+## ScalingERC20
 
 ### UNIT
 
@@ -51,8 +51,6 @@ mapping(address => struct ScalingERC20.UserState) _userStates
 
 User states
 
-## Events
-
 ### Mint
 
 ```solidity
@@ -69,13 +67,11 @@ event Burn(address user, uint256 scaledAmount, uint256 index)
 
 Event emitted when burning
 
-## Constructor
+### constructor
 
 ```solidity
 constructor(string __name, string __symbol) internal
 ```
-
-## View Methods
 
 ### name
 
@@ -89,7 +85,7 @@ Get the name of the ERC20
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | string | string : Name |
+| [0] | string | string : Name |
 
 ### symbol
 
@@ -103,7 +99,7 @@ Get the symbol of the ERC20
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | string | string : Symbol |
+| [0] | string | string : Symbol |
 
 ### decimals
 
@@ -117,7 +113,7 @@ Get the decimals of the ERC20
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint8 | uint256 : Number of decimals |
+| [0] | uint8 | uint256 : Number of decimals |
 
 ### totalSupply
 
@@ -131,7 +127,7 @@ Get the current total supply
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Current total supply |
+| [0] | uint256 | uint256 : Current total supply |
 
 ### balanceOf
 
@@ -151,7 +147,7 @@ Get the current user balance
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : User balance |
+| [0] | uint256 | uint256 : User balance |
 
 ### totalScaledSupply
 
@@ -165,7 +161,7 @@ Get the current total scaled supply
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Current total scaled supply |
+| [0] | uint256 | uint256 : Current total scaled supply |
 
 ### scaledBalanceOf
 
@@ -185,7 +181,7 @@ Get the current user scaled balance
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : User scaled balance |
+| [0] | uint256 | uint256 : User scaled balance |
 
 ### allowance
 
@@ -206,9 +202,7 @@ Get the allowance of a spender for a given owner
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : allowance amount |
-
-## State Changing Methods
+| [0] | uint256 | uint256 : allowance amount |
 
 ### approve
 
@@ -229,7 +223,7 @@ Approve a spender to spend tokens
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | bool | bool : success |
+| [0] | bool | bool : success |
 
 ### increaseAllowance
 
@@ -250,7 +244,7 @@ Increase the allowance given to a spender
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | bool | bool : success |
+| [0] | bool | bool : success |
 
 ### decreaseAllowance
 
@@ -271,7 +265,7 @@ Decrease the allowance given to a spender
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | bool | bool : success |
+| [0] | bool | bool : success |
 
 ### transfer
 
@@ -292,7 +286,7 @@ Transfer tokens to the given recipient
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | bool | bool : success |
+| [0] | bool | bool : success |
 
 ### transferFrom
 
@@ -314,9 +308,7 @@ Transfer tokens from the spender to the given recipient
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | bool | bool : success |
-
-## Internal Methods
+| [0] | bool | bool : success |
 
 ### _getCurrentIndex
 
@@ -330,7 +322,7 @@ _Get the current index to convert between balance and scaled balances_
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Current index |
+| [0] | uint256 | uint256 : Current index |
 
 ### _approve
 
@@ -400,7 +392,7 @@ _Mint the given amount to the given address (by minting the correct scaled amoun
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Amount minted |
+| [0] | uint256 | uint256 : Amount minted |
 
 ### _burn
 
@@ -422,7 +414,7 @@ _Burn the given amount from the given address (by burning the correct scaled amo
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Amount burned |
+| [0] | uint256 | uint256 : Amount burned |
 
 ### _beforeTokenTransfer
 

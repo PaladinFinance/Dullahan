@@ -1,6 +1,6 @@
-# DullahanTreasureChest
+# Solidity API
 
-## Events
+## DullahanTreasureChest
 
 ### AddedManager
 
@@ -18,8 +18,6 @@ event RemovedManager(address manager)
 
 Event emitted when a manager is removed
 
-## Modifiers
-
 ### onlyAllowed
 
 ```solidity
@@ -27,8 +25,6 @@ modifier onlyAllowed()
 ```
 
 Check the caller is either the admin or an approved manager
-
-## View Methods
 
 ### currentBalance
 
@@ -50,9 +46,7 @@ _Returns the balance of this contract for the given ERC20 token_
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : current balance in the given ERC20 token |
-
-## State Changing Methods
+| [0] | uint256 | uint256 : current balance in the given ERC20 token |
 
 ### increaseAllowanceERC20
 

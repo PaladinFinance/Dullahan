@@ -1,14 +1,6 @@
 # Solidity API
 
-## DullahanZapDeposit
-
-### aave
-
-```solidity
-address aave
-```
-
-Address of the AAVE token
+## DullahanMigrator
 
 ### stkAave
 
@@ -17,6 +9,22 @@ address stkAave
 ```
 
 Address of the stkAAVE token
+
+### palStkAave
+
+```solidity
+address palStkAave
+```
+
+Address of the palStkAave token
+
+### palPool
+
+```solidity
+address palPool
+```
+
+Address of the palStkAave PalPool
 
 ### vault
 
@@ -34,13 +42,13 @@ address staking
 
 Address of the Dullahan Staking
 
-### ZapDeposit
+### Migrate
 
 ```solidity
-event ZapDeposit(address caller, address receiver, address sourceToken, uint256 amount, bool staked)
+event Migrate(address caller, address receiver, uint256 amount, uint256 stkAave, bool staked)
 ```
 
-Event emitted when a Zap Depsoit is performed
+Event emitted when a Migration id performed
 
 ### TokenRecovered
 
@@ -53,25 +61,24 @@ Event emitted when an ERC20 token is recovered from this contract
 ### constructor
 
 ```solidity
-constructor(address _aave, address _stkAave, address _vault, address _staking) public
+constructor(address _stkAave, address _palStkAave, address _palPool, address _vault, address _staking) public
 ```
 
-### zapDeposit
+### migrate
 
 ```solidity
-function zapDeposit(address sourceToken, uint256 amount, address receiver, bool stake) external
+function migrate(uint256 amount, address receiver, bool stake) external
 ```
 
-Zap deposit AAVE or stkAAVE into the Vault & stake them
+Withdraw palStkAAVE & deposit into the Vault & stake them
 
-_Pull AAVE or stkAAVE, deposit in the Vault, and stake if flag was given_
+_Withdraw palStkAAVE, deposit in the Vault, and stake if flag was given_
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| sourceToken | address | Address of the token to pull (AAVE or stkAAVE) |
-| amount | uint256 | Amount to deposit |
+| amount | uint256 | Amount of palStkAave |
 | receiver | address | Address to receive the share token / to be staked on behalf of |
 | stake | bool | Flag to stake the received shares |
 

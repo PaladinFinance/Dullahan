@@ -1,6 +1,6 @@
-# DullahanVault
+# Solidity API
 
-## Storage
+## DullahanVault
 
 ### MAX_BPS
 
@@ -91,6 +91,14 @@ address votingPowerManager
 
 Address receiving the delegated voting power from the Vault
 
+### proposalPowerManager
+
+```solidity
+address proposalPowerManager
+```
+
+Address receiving the delegated proposal power from the Vault
+
 ### bufferRatio
 
 ```solidity
@@ -122,8 +130,6 @@ address reserveManager
 ```
 
 Address of the Reserve Manager
-
-## Events
 
 ### Initialized
 
@@ -213,6 +219,14 @@ event UpdatedVotingPowerManager(address oldManager, address newManager)
 
 Event emitted when the Voting maanger is updated
 
+### UpdatedProposalPowerManager
+
+```solidity
+event UpdatedProposalPowerManager(address oldManager, address newManager)
+```
+
+Event emitted when the Proposal maanger is updated
+
 ### UpdatedReserveManager
 
 ```solidity
@@ -227,7 +241,15 @@ Event emitted when the Reserve manager is updated
 event UpdatedBufferRatio(uint256 oldRatio, uint256 newRatio)
 ```
 
-Event emitted when Buffer ratio is updated
+Event emitted when the Buffer ratio is updated
+
+### UpdatedReserveRatio
+
+```solidity
+event UpdatedReserveRatio(uint256 oldRatio, uint256 newRatio)
+```
+
+Event emitted when the Reserve ratio is updated
 
 ### TokenRecovered
 
@@ -236,8 +258,6 @@ event TokenRecovered(address token, uint256 amount)
 ```
 
 Event emitted when an ERC20 token is recovered
-
-## Modifiers
 
 ### onlyAdmin
 
@@ -263,7 +283,7 @@ modifier isInitialized()
 
 Check that the contract is initialized
 
-## Constructor
+### constructor
 
 ```solidity
 constructor(address _admin, uint256 _reserveRatio, address _reserveManager, address _aave, address _stkAave, string _name, string _symbol) public
@@ -272,7 +292,7 @@ constructor(address _admin, uint256 _reserveRatio, address _reserveManager, addr
 ### init
 
 ```solidity
-function init(address _votingPowerManager) external
+function init(address _votingPowerManager, address _proposalPowerManager) external
 ```
 
 Initialize the Vault
@@ -284,8 +304,7 @@ _Initialize the Vault by performing a seed deposit & delegating voting power_
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _votingPowerManager | address | Address to receive the voting power delegation |
-
-## View Methods
+| _proposalPowerManager | address | Address to receive the proposal power delegation |
 
 ### asset
 
@@ -299,7 +318,7 @@ Get the vault's asset
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | address | address : Address of the asset |
+| [0] | address | address : Address of the asset |
 
 ### totalAssets
 
@@ -313,7 +332,7 @@ Get the total amount of assets in the Vault
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : total amount of assets |
+| [0] | uint256 | uint256 : total amount of assets |
 
 ### totalSupply
 
@@ -327,7 +346,7 @@ Get the total supply of shares
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Total supply of shares |
+| [0] | uint256 | uint256 : Total supply of shares |
 
 ### totalAvailable
 
@@ -341,7 +360,7 @@ Get the current total amount of asset available in the Vault
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Current total amount available |
+| [0] | uint256 | uint256 : Current total amount available |
 
 ### convertToShares
 
@@ -361,7 +380,7 @@ Convert a given amount of assets to shares
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : amount of shares |
+| [0] | uint256 | uint256 : amount of shares |
 
 ### convertToAssets
 
@@ -381,7 +400,7 @@ Convert a given amount of shares to assets
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : amount of assets |
+| [0] | uint256 | uint256 : amount of assets |
 
 ### previewDeposit
 
@@ -401,7 +420,7 @@ Return the amount of shares expected for depositing the given assets
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : amount of shares |
+| [0] | uint256 | uint256 : amount of shares |
 
 ### previewMint
 
@@ -421,7 +440,7 @@ Return the amount of assets expected for minting the given shares
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : amount of assets |
+| [0] | uint256 | uint256 : amount of assets |
 
 ### previewWithdraw
 
@@ -441,7 +460,7 @@ Return the amount of shares expected for withdrawing the given assets
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : amount of shares |
+| [0] | uint256 | uint256 : amount of shares |
 
 ### previewRedeem
 
@@ -461,7 +480,7 @@ Return the amount of assets expected for burning the given shares
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : amount of assets |
+| [0] | uint256 | uint256 : amount of assets |
 
 ### maxDeposit
 
@@ -481,7 +500,7 @@ Get the maximum amount that can be deposited by the user
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Max amount to deposit |
+| [0] | uint256 | uint256 : Max amount to deposit |
 
 ### maxMint
 
@@ -501,7 +520,7 @@ Get the maximum amount that can be minted by the user
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Max amount to mint |
+| [0] | uint256 | uint256 : Max amount to mint |
 
 ### maxWithdraw
 
@@ -521,7 +540,7 @@ Get the maximum amount that can be withdrawn by the user
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Max amount to withdraw |
+| [0] | uint256 | uint256 : Max amount to withdraw |
 
 ### maxRedeem
 
@@ -541,7 +560,7 @@ Get the maximum amount that can be burned by the user
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Max amount to burn |
+| [0] | uint256 | uint256 : Max amount to burn |
 
 ### getCurrentIndex
 
@@ -555,23 +574,15 @@ Get the current index to convert between balance and scaled balances
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Current index |
+| [0] | uint256 | uint256 : Current index |
 
-### getDelegate
+### getDelegates
 
 ```solidity
-function getDelegate() external view returns (address)
+function getDelegates() external view returns (address votingPower, address proposalPower)
 ```
 
-Get the current delegate for the Vault voting power
-
-#### Return Values
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| - | address | address : Curent delegate for the Vault voting power |
-
-## State Changing Methods
+Get the current delegates for the Vault voting power & proposal power
 
 ### deposit
 
@@ -718,8 +729,6 @@ _Pull stkAAVE from a Pod & update the tracked rented amount_
 | pod | address | Address of the Pod |
 | amount | uint256 | Amount to pull |
 
-## Internal Methods
-
 ### _getCurrentIndex
 
 ```solidity
@@ -732,7 +741,7 @@ _Get the current index to convert between balance and scaled balances_
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Current index |
+| [0] | uint256 | uint256 : Current index |
 
 ### _deposit
 
@@ -754,8 +763,8 @@ _Pull assets to deposit in the Vault & mint shares_
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Amount of assets deposited |
-| - | uint256 | uint256 : Amount of shares minted |
+| [0] | uint256 | uint256 : Amount of assets deposited |
+| [1] | uint256 | uint256 : Amount of shares minted |
 
 ### _withdraw
 
@@ -778,8 +787,8 @@ _Withdraw assets from the Vault & send to the receiver & burn shares_
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | uint256 | uint256 : Amount of assets withdrawn |
-| - | uint256 | uint256 : Amount of shares burned |
+| [0] | uint256 | uint256 : Amount of assets withdrawn |
+| [1] | uint256 | uint256 : Amount of shares burned |
 
 ### beforeWithdraw
 
@@ -812,7 +821,7 @@ _Hook exectued after depositing_
 ### _beforeTokenTransfer
 
 ```solidity
-function _beforeTokenTransfer(address from, address to, uint256 amount) internal
+function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual
 ```
 
 _Hook executed before each transfer_
@@ -828,7 +837,7 @@ _Hook executed before each transfer_
 ### _afterTokenTransfer
 
 ```solidity
-function _afterTokenTransfer(address from, address to, uint256 amount) internal
+function _afterTokenTransfer(address from, address to, uint256 amount) internal virtual
 ```
 
 _Hook executed after each transfer_
@@ -848,8 +857,6 @@ function _getStkAaveRewards() internal
 ```
 
 _Claim AAVE rewards from the Safety Module & stake them to receive stkAAVE_
-
-## Admin Methods
 
 ### pause
 
@@ -931,6 +938,20 @@ Update the Vault's voting power manager & delegate the voting power to it
 | ---- | ---- | ----------- |
 | newManager | address | Address of the new manager |
 
+### updateProposalPowerManager
+
+```solidity
+function updateProposalPowerManager(address newManager) external
+```
+
+Update the Vault's proposal power manager & delegate the proposal power to it
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| newManager | address | Address of the new manager |
+
 ### updateReserveManager
 
 ```solidity
@@ -944,6 +965,20 @@ Update the Vault's Reserve manager
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | newManager | address | Address of the new manager |
+
+### updateReserveRatio
+
+```solidity
+function updateReserveRatio(uint256 newRatio) external
+```
+
+Uodate the reserve ratio parameter
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| newRatio | uint256 | New ratio value |
 
 ### updateBufferRatio
 
@@ -1008,7 +1043,7 @@ _Recover ERC2O tokens sent by mistake to the contract_
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| - | bool | bool: success |
+| [0] | bool | bool: success |
 
 ### safe248
 
