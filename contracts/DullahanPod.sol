@@ -402,7 +402,7 @@ contract DullahanPod is ReentrancyGuard {
     }
 
     /**
-    * @notice Change the pdProxyOwner for this Pod
+    * @notice Change the podProxyOwner for this Pod
     * @dev Allow the Pod owner or the current proxy owner to change the proxy owner
     * @param newProxyOwner Address of the new podProxyOwner
     */
@@ -414,6 +414,10 @@ contract DullahanPod is ReentrancyGuard {
         emit ProxyOwnerUpdated(newProxyOwner);
     }
 
+    /**
+    * @notice Forfeit the Pod proxy ownership rights
+    * @dev Forfeit the Pod proxy ownership rights, only callable by the current podProxyOwner
+    */
     function forfeitProxyOwnserhip() external isInitialized {
         if(msg.sender != podProxyOwner) revert Errors.NotPodProxyOwner();
 
