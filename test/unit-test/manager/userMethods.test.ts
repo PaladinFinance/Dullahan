@@ -244,7 +244,7 @@ describe('DullahanPodManager contract tests - user functions', () => {
 
         it(' should clone the Pod implementation & initialize it with correct parameters (& emit correct Event)', async () => {
 
-            const clone_tx = await manager.connect(podOwner).createPod(collat.address)
+            const clone_tx = await manager.connect(podOwner).createPod(collat.address, podOwner.address)
 
             const podList = await manager.getAllPods()
             const new_pod = MockPod__factory.connect(podList[podList.length - 1], provider);
@@ -257,6 +257,7 @@ describe('DullahanPodManager contract tests - user functions', () => {
             expect(await new_pod.collateral()).to.be.eq(collat.address)
             expect(await new_pod.aToken()).to.be.eq(aCollat.address)
             expect(await new_pod.podOwner()).to.be.eq(podOwner.address)
+            expect(await new_pod.podProxyOwner()).to.be.eq(ethers.constants.AddressZero)
             expect(await new_pod.votingPowerDelegate()).to.be.eq(delegate.address)
             expect(await new_pod.proposalPowerDelegate()).to.be.eq(delegate2.address)
             expect(await new_pod.aave()).to.be.eq(aave.address)
@@ -269,7 +270,7 @@ describe('DullahanPodManager contract tests - user functions', () => {
 
         it(' should list the new Pod & store the correct parameters', async () => {
 
-            await manager.connect(podOwner).createPod(collat.address)
+            await manager.connect(podOwner).createPod(collat.address, podOwner.address)
 
             const podList = await manager.getAllPods()
             const new_pod = MockPod__factory.connect(podList[podList.length - 1], provider);
@@ -284,9 +285,9 @@ describe('DullahanPodManager contract tests - user functions', () => {
 
         it(' should allow to create other Pods', async () => {
 
-            const clone_tx = await manager.connect(podOwner).createPod(collat.address)
+            const clone_tx = await manager.connect(podOwner).createPod(collat.address, podOwner.address)
 
-            const clone_tx2 = await manager.connect(otherUser).createPod(collat2.address)
+            const clone_tx2 = await manager.connect(otherUser).createPod(collat2.address, otherUser.address)
 
             const podList = await manager.getAllPods()
             const new_pod = MockPod__factory.connect(podList[podList.length - 2], provider);
@@ -314,7 +315,7 @@ describe('DullahanPodManager contract tests - user functions', () => {
 
         it(' should update the global state correctly', async () => {
 
-            const clone_tx = await manager.connect(podOwner).createPod(collat.address)
+            const clone_tx = await manager.connect(podOwner).createPod(collat.address, podOwner.address)
 
             const tx_timestamp = (await ethers.provider.getBlock((await clone_tx).blockNumber || 0)).timestamp
 
@@ -325,7 +326,7 @@ describe('DullahanPodManager contract tests - user functions', () => {
         it(' should fail if collateral is not allowed', async () => {
 
             await expect(
-                manager.connect(podOwner).createPod(REWARD_TOKEN_1)
+                manager.connect(podOwner).createPod(REWARD_TOKEN_1, podOwner.address)
             ).to.be.revertedWith('CollateralNotAllowed')
 
         });
@@ -333,7 +334,11 @@ describe('DullahanPodManager contract tests - user functions', () => {
         it(' should fail if given address 0x0', async () => {
 
             await expect(
-                manager.connect(podOwner).createPod(ethers.constants.AddressZero)
+                manager.connect(podOwner).createPod(ethers.constants.AddressZero, podOwner.address)
+            ).to.be.revertedWith('AddressZero')
+
+            await expect(
+                manager.connect(podOwner).createPod(collat.address, ethers.constants.AddressZero)
             ).to.be.revertedWith('AddressZero')
 
         });
@@ -347,8 +352,8 @@ describe('DullahanPodManager contract tests - user functions', () => {
 
         beforeEach(async () => {
 
-            await manager.connect(podOwner).createPod(collat.address)
-            await manager.connect(podOwner).createPod(collat.address)
+            await manager.connect(podOwner).createPod(collat.address, podOwner.address)
+            await manager.connect(podOwner).createPod(collat.address, podOwner.address)
             const podList = await manager.getAllPods()
             pod = MockPod__factory.connect(podList[podList.length - 2], provider);
             pod2 = MockPod__factory.connect(podList[podList.length - 1], provider);
@@ -391,8 +396,8 @@ describe('DullahanPodManager contract tests - user functions', () => {
             const previous_debt = ethers.utils.parseEther('3500')
             const previous_debt2 = ethers.utils.parseEther('1500')
 
-            await manager.connect(podOwner).createPod(collat.address)
-            await manager.connect(podOwner).createPod(collat.address)
+            await manager.connect(podOwner).createPod(collat.address, podOwner.address)
+            await manager.connect(podOwner).createPod(collat.address, podOwner.address)
             const podList = await manager.getAllPods()
             pod = MockPod__factory.connect(podList[podList.length - 2], provider);
             pod2 = MockPod__factory.connect(podList[podList.length - 1], provider);
@@ -481,8 +486,8 @@ describe('DullahanPodManager contract tests - user functions', () => {
             const previous_debt = ethers.utils.parseEther('3500')
             const previous_debt2 = ethers.utils.parseEther('1500')
 
-            await manager.connect(podOwner).createPod(collat.address)
-            await manager.connect(podOwner).createPod(collat.address)
+            await manager.connect(podOwner).createPod(collat.address, podOwner.address)
+            await manager.connect(podOwner).createPod(collat.address, podOwner.address)
             const podList = await manager.getAllPods()
             pod = MockPod__factory.connect(podList[podList.length - 2], provider);
             pod2 = MockPod__factory.connect(podList[podList.length - 1], provider);
@@ -677,8 +682,8 @@ describe('DullahanPodManager contract tests - user functions', () => {
                 ethers.utils.parseEther('0.00005')
             )*/
 
-            await manager.connect(podOwner).createPod(collat.address)
-            await manager.connect(otherUser).createPod(collat2.address)
+            await manager.connect(podOwner).createPod(collat.address, podOwner.address)
+            await manager.connect(otherUser).createPod(collat2.address, otherUser.address)
             const podList = await manager.getAllPods()
             pod = MockPod__factory.connect(podList[podList.length - 2], provider);
             pod2 = MockPod__factory.connect(podList[podList.length - 1], provider);
@@ -943,7 +948,7 @@ describe('DullahanPodManager contract tests - user functions', () => {
 
         beforeEach(async () => {
             
-            await manager.connect(podOwner).createPod(collat.address)
+            await manager.connect(podOwner).createPod(collat.address, podOwner.address)
             const podList = await manager.getAllPods()
             pod = MockPod__factory.connect(podList[podList.length - 1], provider);
 
@@ -981,9 +986,9 @@ describe('DullahanPodManager contract tests - user functions', () => {
 
         beforeEach(async () => {
             
-            await manager.connect(podOwner).createPod(collat.address)
-            await manager.connect(podOwner).createPod(collat.address)
-            await manager.connect(podOwner).createPod(collat.address)
+            await manager.connect(podOwner).createPod(collat.address, podOwner.address)
+            await manager.connect(podOwner).createPod(collat.address, podOwner.address)
+            await manager.connect(podOwner).createPod(collat.address, podOwner.address)
             const podList = await manager.getAllPods()
             pod = MockPod__factory.connect(podList[podList.length - 3], provider);
             pod2 = MockPod__factory.connect(podList[podList.length - 2], provider);
@@ -1044,8 +1049,8 @@ describe('DullahanPodManager contract tests - user functions', () => {
                 ethers.utils.parseEther('0.00005')
             )
 
-            await manager.connect(podOwner).createPod(collat.address)
-            await manager.connect(otherUser).createPod(collat.address)
+            await manager.connect(podOwner).createPod(collat.address, podOwner.address)
+            await manager.connect(otherUser).createPod(collat.address, otherUser.address)
             const podList = await manager.getAllPods()
             pod = MockPod__factory.connect(podList[podList.length - 2], provider);
             pod2 = MockPod__factory.connect(podList[podList.length - 1], provider);
@@ -1107,7 +1112,7 @@ describe('DullahanPodManager contract tests - user functions', () => {
 
         it(' should update the global state correctly', async () => {
 
-            const clone_tx = await manager.connect(podOwner).createPod(collat.address)
+            const clone_tx = await manager.connect(podOwner).createPod(collat.address, podOwner.address)
 
             const tx_timestamp = (await ethers.provider.getBlock((await clone_tx).blockNumber || 0)).timestamp
 

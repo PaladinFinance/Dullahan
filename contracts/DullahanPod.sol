@@ -44,7 +44,7 @@ contract DullahanPod is ReentrancyGuard {
     /** @notice Is the Pod initialized */
     bool public initialized;
 
-    /** @notice Address of the Pod manager */
+    /** @notice Address of the PodManager contract */
     address public manager;
     /** @notice Address of the Vault */
     address public vault;
@@ -53,6 +53,8 @@ contract DullahanPod is ReentrancyGuard {
 
     /** @notice Address of the Pod owner */
     address public podOwner;
+    /** @notice Address of the Pod Proxy owner, allowed to control the Pod for the owner */
+    address public podProxyOwner;
 
     /** @notice Address of the delegate receiving the Pod voting power */
     address public votingPowerDelegate;
@@ -101,12 +103,17 @@ contract DullahanPod is ReentrancyGuard {
     /** @notice Event emitted when the Pod registry is updated */
     event UpdatedRegistry(address indexed oldRegistry, address indexed newRegistry);
 
+    /** @notice Event emitted when the proxyOwner is updated */
+    event ProxyOwnerUpdated(address indexed newProxyOwner);
+    /** @notice Event emitted when the proxyOwner is forfeited */
+    event ProxyOwnerForfeited();
+
 
     // Modifers
 
-    /** @notice Check that the caller is the Pod owner */
+    /** @notice Check that the caller is the Pod owner or the proxy onwer */
     modifier onlyPodOwner() {
-        if(msg.sender != podOwner) revert Errors.NotPodOwner();
+        if(msg.sender != podOwner && msg.sender != podProxyOwner) revert Errors.NotPodOwner();
         _;
     }
 
@@ -131,6 +138,7 @@ contract DullahanPod is ReentrancyGuard {
         registry = address(0xdEaD);
         collateral = address(0xdEaD);
         podOwner = address(0xdEaD);
+        podProxyOwner = address(0xdEaD);
         votingPowerDelegate = address(0xdEaD);
         proposalPowerDelegate = address(0xdEaD);
     }
@@ -141,6 +149,7 @@ contract DullahanPod is ReentrancyGuard {
     * @param _vault Address of the Vault
     * @param _registry Address of the Registry
     * @param _podOwner Address of the Pod owner
+    * @param _podProxyOwner Address of the Pod proxy owner
     * @param _collateral Address of the collateral
     * @param _aToken Address of the aToken for the collateral
     * @param _votingPowerDelegate Address of the delegate for the voting power
@@ -151,6 +160,7 @@ contract DullahanPod is ReentrancyGuard {
         address _vault,
         address _registry,
         address _podOwner,
+        address _podProxyOwner,
         address _collateral,
         address _aToken,
         address _votingPowerDelegate,
@@ -178,6 +188,10 @@ contract DullahanPod is ReentrancyGuard {
         collateral = _collateral;
         votingPowerDelegate = _votingPowerDelegate;
         proposalPowerDelegate = _proposalPowerDelegate;
+
+        if(_podProxyOwner != address(0)) {
+            podProxyOwner = _podProxyOwner;
+        }
 
         aToken = _aToken;
 
@@ -385,6 +399,27 @@ contract DullahanPod is ReentrancyGuard {
         emit RentedStkAave();
 
         return true;
+    }
+
+    /**
+    * @notice Change the pdProxyOwner for this Pod
+    * @dev Allow the Pod owner or the current proxy owner to change the proxy owner
+    * @param newProxyOwner Address of the new podProxyOwner
+    */
+    function changeProxyOwner(address newProxyOwner) external isInitialized onlyPodOwner {
+        if(newProxyOwner == podProxyOwner) revert Errors.SameAddress();
+
+        podProxyOwner = newProxyOwner;
+
+        emit ProxyOwnerUpdated(newProxyOwner);
+    }
+
+    function forfeitProxyOwnserhip() external isInitialized {
+        if(msg.sender != podProxyOwner) revert Errors.NotPodProxyOwner();
+
+        podProxyOwner = address(0);
+
+        emit ProxyOwnerForfeited();
     }
 
 
