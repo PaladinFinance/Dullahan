@@ -713,7 +713,7 @@ describe('DullahanPodManager contract tests - Admin functions', () => {
 
             await manager.connect(admin).addCollateral(collat.address, aCollat.address)
             
-            await manager.connect(podOwner).createPod(collat.address)
+            await manager.connect(podOwner).createPod(collat.address, podOwner.address)
             const podList = await manager.getAllPods()
             pod = MockPod__factory.connect(podList[podList.length - 1], provider);
 
@@ -763,9 +763,9 @@ describe('DullahanPodManager contract tests - Admin functions', () => {
 
             await manager.connect(admin).addCollateral(collat.address, aCollat.address)
             
-            await manager.connect(podOwner).createPod(collat.address)
-            await manager.connect(podOwner).createPod(collat.address)
-            await manager.connect(podOwner).createPod(collat.address)
+            await manager.connect(podOwner).createPod(collat.address, podOwner.address)
+            await manager.connect(podOwner).createPod(collat.address, podOwner.address)
+            await manager.connect(podOwner).createPod(collat.address, podOwner.address)
             const podList = await manager.getAllPods()
             pod = MockPod__factory.connect(podList[podList.length - 3], provider);
             pod2 = MockPod__factory.connect(podList[podList.length - 2], provider);
@@ -821,9 +821,9 @@ describe('DullahanPodManager contract tests - Admin functions', () => {
 
             await manager.connect(admin).addCollateral(collat.address, aCollat.address)
             
-            await manager.connect(podOwner).createPod(collat.address)
-            await manager.connect(podOwner).createPod(collat.address)
-            await manager.connect(podOwner).createPod(collat.address)
+            await manager.connect(podOwner).createPod(collat.address, podOwner.address)
+            await manager.connect(podOwner).createPod(collat.address, podOwner.address)
+            await manager.connect(podOwner).createPod(collat.address, podOwner.address)
             const podList = await manager.getAllPods()
             pod = MockPod__factory.connect(podList[podList.length - 3], provider);
             pod2 = MockPod__factory.connect(podList[podList.length - 2], provider);

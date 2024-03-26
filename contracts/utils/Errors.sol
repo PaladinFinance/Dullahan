@@ -62,6 +62,7 @@ library Errors {
     error FailPodStateUpdate();
     error MintAmountUnderMinimum();
     error RepayFailed();
+    error NotPodProxyOwner();
 
     // Pods Manager Errors
     error CallerNotValidPod();

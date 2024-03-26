@@ -18,6 +18,7 @@ contract MockPod {
     address public registry;
 
     address public podOwner;
+    address public podProxyOwner;
 
     address public votingPowerDelegate;
     address public proposalPowerDelegate;
@@ -33,6 +34,7 @@ contract MockPod {
         address _vault,
         address _registry,
         address _podOwner,
+        address _podProxyOwner,
         address _collateral,
         address _aToken,
         address _votingPowerDelegate,
@@ -44,6 +46,7 @@ contract MockPod {
         vault = _vault;
         registry = _registry;
         podOwner = _podOwner;
+        podProxyOwner = _podProxyOwner;
         collateral = _collateral;
         votingPowerDelegate = _votingPowerDelegate;
         proposalPowerDelegate = _proposalPowerDelegate;
