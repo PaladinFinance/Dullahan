@@ -121,6 +121,6 @@ For any question about this project, or to engage with us :
 ## License
 
 
-This project is licensed under the [MIT](https://github.com/PaladinFinance/Paladin-Evocations/blob/main/MIT-LICENSE.TXT) license
+This project is licensed under the [BUSL 1.1](https://github.com/PaladinFinance/Dullahan/blob/main/LICENSE.TXT) license
 
 
