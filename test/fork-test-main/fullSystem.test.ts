@@ -271,7 +271,7 @@ describe('Dullahan full system tests - Mainnet version', () => {
 
         it(' should create a new Pod correctly', async () => {
 
-            const create_tx = await manager.connect(podOwner).createPod(token1.address)
+            const create_tx = await manager.connect(podOwner).createPod(token1.address, podOwner.address)
 
             const podList = await manager.getAllPods()
             const new_pod = DullahanPod__factory.connect(podList[podList.length - 1], provider);
@@ -284,6 +284,7 @@ describe('Dullahan full system tests - Mainnet version', () => {
             expect(await new_pod.collateral()).to.be.eq(token1.address)
             expect(await new_pod.aToken()).to.be.eq(aToken1.address)
             expect(await new_pod.podOwner()).to.be.eq(podOwner.address)
+            expect(await new_pod.podProxyOwner()).to.be.eq(ethers.constants.AddressZero)
             expect(await new_pod.votingPowerDelegate()).to.be.eq(votingManager.address)
             expect(await new_pod.proposalPowerDelegate()).to.be.eq(votingManager.address)
             expect(await new_pod.aave()).to.be.eq(aave.address)
@@ -324,7 +325,7 @@ describe('Dullahan full system tests - Mainnet version', () => {
 
         beforeEach(async () => {
 
-            await manager.connect(podOwner).createPod(token1.address)
+            await manager.connect(podOwner).createPod(token1.address, podOwner.address)
 
             const podList = await manager.getAllPods()
             pod = DullahanPod__factory.connect(podList[podList.length - 1], provider);
@@ -392,7 +393,7 @@ describe('Dullahan full system tests - Mainnet version', () => {
 
         beforeEach(async () => {
 
-            await manager.connect(podOwner).createPod(token1.address)
+            await manager.connect(podOwner).createPod(token1.address, podOwner.address)
 
             const podList = await manager.getAllPods()
             pod = DullahanPod__factory.connect(podList[podList.length - 1], provider);
@@ -480,7 +481,7 @@ describe('Dullahan full system tests - Mainnet version', () => {
 
         beforeEach(async () => {
 
-            await manager.connect(podOwner).createPod(token1.address)
+            await manager.connect(podOwner).createPod(token1.address, podOwner.address)
 
             const podList = await manager.getAllPods()
             pod = DullahanPod__factory.connect(podList[podList.length - 1], provider);
@@ -610,7 +611,7 @@ describe('Dullahan full system tests - Mainnet version', () => {
 
             await gho.connect(admin).transfer(podOwner.address, ethers.utils.parseEther('50000'))
 
-            await manager.connect(podOwner).createPod(token1.address)
+            await manager.connect(podOwner).createPod(token1.address, podOwner.address)
 
             const podList = await manager.getAllPods()
             pod = DullahanPod__factory.connect(podList[podList.length - 1], provider);
@@ -688,7 +689,7 @@ describe('Dullahan full system tests - Mainnet version', () => {
 
             await gho.connect(admin).transfer(podOwner.address, ethers.utils.parseEther('50000'))
 
-            await manager.connect(podOwner).createPod(token1.address)
+            await manager.connect(podOwner).createPod(token1.address, podOwner.address)
 
             const podList = await manager.getAllPods()
             pod = DullahanPod__factory.connect(podList[podList.length - 1], provider);
@@ -843,8 +844,8 @@ describe('Dullahan full system tests - Mainnet version', () => {
 
             await gho.connect(admin).transfer(podOwner.address, ethers.utils.parseEther('50000'))
 
-            await manager.connect(podOwner).createPod(token1.address)
-            await manager.connect(podOwner).createPod(token2.address)
+            await manager.connect(podOwner).createPod(token1.address, podOwner.address)
+            await manager.connect(podOwner).createPod(token2.address, podOwner.address)
 
             const podList = await manager.getAllPods()
             pod = DullahanPod__factory.connect(podList[podList.length - 2], provider);

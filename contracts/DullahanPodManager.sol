@@ -321,13 +321,12 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
     * @return address : Address of the newly deployed Pod
     */
     function createPod(
-        address collateral
+        address collateral,
+        address owner
     ) external nonReentrant whenNotPaused returns(address) {
-        if(collateral == address(0)) revert Errors.AddressZero();
+        if(collateral == address(0) || owner == address(0)) revert Errors.AddressZero();
         if(!allowedCollaterals[collateral]) revert Errors.CollateralNotAllowed();
         if(!_updateGlobalState()) revert Errors.FailStateUpdate();
-
-        address podOwner = msg.sender;
 
         // Clone to create new Pod
         address newPod = Clones.clone(podImplementation);
@@ -339,7 +338,8 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
             address(this),
             vault,
             registry,
-            podOwner,
+            owner,
+            owner == msg.sender ? address(0) : msg.sender,
             collateral,
             aTokenForCollateral[collateral],
             votingPowerDelegate,
@@ -348,12 +348,12 @@ contract DullahanPodManager is ReentrancyGuard, Pausable, Owner {
 
         // Write the new Pod data in storage
         pods[newPod].podAddress = newPod;
-        pods[newPod].podOwner = podOwner;
+        pods[newPod].podOwner = owner;
         pods[newPod].collateral = collateral;
         allPods.push(newPod);
-        ownerPods[podOwner].push(newPod);
+        ownerPods[owner].push(newPod);
 
-        emit PodCreation(collateral, podOwner, newPod);
+        emit PodCreation(collateral, owner, newPod);
 
         return newPod;
     }
